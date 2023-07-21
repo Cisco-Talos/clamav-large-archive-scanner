@@ -1,0 +1,5 @@
+*.tar.gz
+requirements.txt
+**venv**
+**.idea**
+**__pycache__**

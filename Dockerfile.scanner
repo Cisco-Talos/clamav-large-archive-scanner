@@ -1,0 +1,29 @@
+FROM ubuntu:22.04
+# Upgrade sys packages
+# Put it up here so that builds are faster
+
+RUN set -eux; \
+    apt-get update; \
+    apt-get upgrade -y; 
+
+# RUN apt-get -y install libguestfs-tools 7zip
+# RUN apt-get -y install libguestfs-tools 
+RUN apt-get -y install libguestfs-tools linux-image-5.15.0-76-generic libmagic1 python3-pip
+
+
+RUN guestfish -a /dev/null run
+
+
+RUN mkdir /workspace
+WORKDIR /workspace
+COPY requirements.txt /workspace
+
+RUN pip3 install -r requirements.txt
+
+
+# Not needed just faster
+RUN mkdir /mnt/t_m_1
+
+# TODO: Remove APT Cache
+# RUN rm -rf /var/lib/apt/lists/*
+

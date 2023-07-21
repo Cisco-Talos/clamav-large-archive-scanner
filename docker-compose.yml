@@ -1,0 +1,13 @@
+# version: "3"
+
+services:
+
+  scanner:
+    image: cisco.com/clamav/scanner
+    build:
+      context: .
+      dockerfile: Dockerfile.scanner
+    volumes:
+      - /home/yanbzhu/clamAV/:/workspace
+    privileged: true
+    network_mode: "host"
