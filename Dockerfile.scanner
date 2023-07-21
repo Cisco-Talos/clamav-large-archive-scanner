@@ -8,16 +8,20 @@ RUN set -eux; \
 
 # RUN apt-get -y install libguestfs-tools 7zip
 # RUN apt-get -y install libguestfs-tools 
-RUN apt-get -y install libguestfs-tools linux-image-5.15.0-76-generic libmagic1 python3-pip
 
-
+# Guestfs Stuff
+RUN apt-get install -y libguestfs-tools linux-image-5.15.0-76-generic 
 RUN guestfish -a /dev/null run
 
 
 RUN mkdir /workspace
 WORKDIR /workspace
+
+# Temp measure
 COPY requirements.txt /workspace
 
+# Extractor tool stuff
+RUN apt-get install -y libmagic1 python3-pip
 RUN pip3 install -r requirements.txt
 
 

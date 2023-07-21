@@ -2,7 +2,7 @@
 
 import click
 import lib.detect as detect
-
+import lib.unpackers as unpackers
 
 @click.group()
 def cli():
@@ -15,7 +15,9 @@ def unpack(path):
     file_meta = detect.get_metadata(path)
 
     print(f'Got file metadata: \n{file_meta}')
-    pass
+
+    unpackers.unpack(file_meta)
+
 
 
 if __name__ == "__main__":
