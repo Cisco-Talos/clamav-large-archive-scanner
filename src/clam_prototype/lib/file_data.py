@@ -25,10 +25,12 @@ class FileMetadata:
         self.desc = ''
         self.size = 0
         self.filetype = FileType.UNKNOWN
+        self.root_meta = None
 
     def get_filename(self) -> str:
         return os.path.basename(self.path)
 
+    # Maybe don't need?
     def as_json(self) -> str:
         return dedent(f'''\
                 {{

@@ -62,6 +62,21 @@ FILETYPE_HANDLERS = {
 }
 
 
+def _cleanup_file(filepath: str, only_one: bool) -> None:
+    files = find_associated_dirs(filepath)
+    if len(files) == 0:
+        print(f'No associated directories found for {filepath}')
+
+    if only_one:
+        print(f'Found an associated directory for {filepath}')
+        cleanup_path(files[0])
+    else:
+        print(f'Found {len(files)} associated directories for {filepath}')
+        print(files)
+        for file in files:
+            cleanup_path(file)
+
+
 def cleanup_path(filepath: str) -> None:
     filetype = determine_filetype(filepath)
 
@@ -74,14 +89,8 @@ def cleanup_path(filepath: str) -> None:
 
 
 def cleanup_file(filepath: str) -> None:
-    files = find_associated_dirs(filepath)
-    if len(files) == 0:
-        print(f'No associated directories found for {filepath}')
-
-    print(f'Found an associated directorie for {filepath}')
-
-    cleanup_path(files[0])
+    _cleanup_file(filepath, only_one=True)
 
 
 def cleanup_recursive(filepath: str) -> None:
-    pass
+    _cleanup_file(filepath, only_one=False)

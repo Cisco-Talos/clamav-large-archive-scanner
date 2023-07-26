@@ -1,9 +1,10 @@
+import os
 import shutil
 import subprocess
 
 import click
 
-from lib.file_data import FileMetadata, FileType
+from lib.file_data import FileMetadata, FileType, file_meta_from_path
 from lib.tmp_files import make_temp_dir
 
 
@@ -95,5 +96,35 @@ def unpack(file: FileMetadata) -> str:
     return _do_unpack(file)
 
 
-def unpack_recursive(file: FileMetadata) -> list[str]:
-    pass
+def unpack_recursive(parent_file: FileMetadata, min_file_size) -> list[str]:
+    unpacked_dirs = list()
+
+    parent_unpack_dir = _do_unpack(parent_file)
+
+    unpacked_dirs.append(parent_unpack_dir)
+
+    dirs_to_inspect = [parent_unpack_dir]
+
+    # Now walk the unpacked directory and find all relevant archives
+    # Add found archives to inspection list
+    # Go until all archives are unpacked and inspected
+    while len(dirs_to_inspect) > 0:
+        current_dir = dirs_to_inspect.pop()
+
+        for root, _, files in os.walk(current_dir):
+            for file in files:
+                file_path = os.path.join(root, file)
+                file_meta = file_meta_from_path(file_path)
+
+                if file_meta.size < min_file_size or not is_handled_filetype(file_meta.filetype):
+                    continue
+
+                # Current is a valid unpackable archive
+                print(f'Found archive: {file_path}')
+                file_meta.root_meta = parent_file
+
+                unpack_dir = _do_unpack(file_meta)
+                unpacked_dirs.append(unpack_dir)
+                dirs_to_inspect.append(unpack_dir)
+
+    return unpacked_dirs

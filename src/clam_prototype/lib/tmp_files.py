@@ -7,7 +7,10 @@ from lib.file_data import FileMetadata, FileType
 
 # Makes a temporary directory for the file to be unpacked into, named base on filetype and filename
 def make_temp_dir(file_meta: FileMetadata) -> str:
-    prefix = f'clam_unpacker_{file_meta.filetype.get_filetype_short()}_{file_meta.get_filename()}_'
+    if not file_meta.root_meta:
+        prefix = f'clam_unpacker_{file_meta.filetype.get_filetype_short()}_{file_meta.get_filename()}_'
+    else:
+        prefix = f'clam_unpacker_{file_meta.filetype.get_filetype_short()}_p-{file_meta.root_meta.get_filename()}-p_{file_meta.get_filename()}_'
     tmp_dir = tempfile.mkdtemp(prefix=prefix, dir='/tmp')
 
     return tmp_dir
@@ -22,6 +25,7 @@ def determine_filetype(path: str) -> FileType:
     return FileType.UNKNOWN
 
 
+# Find all the directories created by make_temp_dir that are associated with the given file
 def find_associated_dirs(filepath: str) -> list[str]:
     file_name = os.path.basename(filepath)
     return glob.glob(f'/tmp/clam_unpacker_*_{file_name}_*')
