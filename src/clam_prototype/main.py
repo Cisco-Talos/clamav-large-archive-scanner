@@ -20,7 +20,7 @@ def cli():
 def unpack(path, recursive, ignore_size):
     file_meta = detect.file_meta_from_path(path)
 
-    # print(f'Got file metadata: \n{file_meta}')
+    print(f'Got file metadata: \n{file_meta}')
 
     min_file_size = DEFAULT_MIN_SIZE_THRESHOLD
     if ignore_size:
@@ -28,7 +28,7 @@ def unpack(path, recursive, ignore_size):
 
     # Check if filesize is < 2GB
     # If so, do not try to unpack it, unless --ignore-size is passed
-    if file_meta.size < min_file_size:
+    if file_meta.size_raw < min_file_size:
         print('File size is below the threshold of 2gb, not unpacking. Use --ignore-size to force unpacking')
         return
 

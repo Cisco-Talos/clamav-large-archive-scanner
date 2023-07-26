@@ -2,6 +2,7 @@ import json
 from enum import Enum
 from textwrap import dedent
 
+import humanize
 import magic
 import os
 
@@ -13,6 +14,7 @@ class FileType(Enum):
     ISO = (3, "iso")
     VMDK = (4, "vmdk")
     TARGZ = (5, "tar.gz")
+    QCOW2 = (6, "qcow2")
     UNKNOWN = (99, "unknown")
 
     def get_filetype_short(self):
@@ -23,7 +25,7 @@ class FileMetadata:
     def __init__(self):
         self.path = ''
         self.desc = ''
-        self.size = 0
+        self.size_raw = 0
         self.filetype = FileType.UNKNOWN
         self.root_meta = None
 
@@ -31,20 +33,20 @@ class FileMetadata:
         return os.path.basename(self.path)
 
     # Maybe don't need?
-    def as_json(self) -> str:
-        return dedent(f'''\
-                {{
-                    "path": "{self.path}",
-                    "desc": "{self.desc}",
-                    "size": {self.size},
-                    "filetype": "{self.filetype}"
-                }}''')
+    # def as_json(self) -> str:
+    #     return dedent(f'''\
+    #             {{
+    #                 "path": "{self.path}",
+    #                 "desc": "{self.desc}",
+    #                 "size": {self.size},
+    #                 "filetype": "{self.filetype}"
+    #             }}''')
 
     def __str__(self):
         return dedent(f'''\
                 Path: {self.path} 
                 Description: {self.desc}
-                Size: {self.size} bytes)
+                Size: {humanize.naturalsize(self.size_raw)}
                 Filetype: {self.filetype}''')
 
 
@@ -61,6 +63,8 @@ def _get_filetype(desc) -> FileType:
         return FileType.VMDK
     elif desc.startswith('gzip compressed data'):
         return FileType.TARGZ
+    elif desc.startswith('QEMU QCOW2 Image'):
+        return FileType.QCOW2
     else:
         return FileType.UNKNOWN
 
@@ -69,7 +73,7 @@ def file_meta_from_path(path: str) -> 'FileMetadata':
     rv = FileMetadata()
     rv.path = path
     rv.desc = magic.from_file(path, mime=False)
-    rv.size = os.path.getsize(path)
+    rv.size_raw = os.path.getsize(path)
     rv.filetype = _get_filetype(rv.desc)
 
     return rv
@@ -81,7 +85,7 @@ def file_meta_from_json(json_str: str) -> 'FileMetadata':
 
     rv.path = json_obj['path']
     rv.desc = json_obj['desc']
-    rv.size = json_obj['size']
+    rv.size_raw = json_obj['size']
     rv.filetype = json_obj['filetype']
 
     return rv

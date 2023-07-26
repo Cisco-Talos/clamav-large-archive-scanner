@@ -49,8 +49,49 @@ class VmdkFileUnpackHandler(BaseFileUnpackHandler):
     def __init__(self, file_meta: FileMetadata):
         super().__init__(file_meta)
 
+    # These VM Filesystem images can have multiple partitions
+    # These need to be mounted individually
+    def _list_partitions(self) -> list[str]:
+        result = subprocess.run(['virt-filesystems', '-a', self.file_meta.path], capture_output=True, text=True)
+        if result.returncode != 0:
+            raise click.FileError(f'Unable to list partitions for {self.file_meta.path}, aborting unpack')
+
+        partitions = [x for x in result.stdout.split('\n') if x != '']
+
+        print(f'partitions is {partitions}')
+
+        return partitions
+
+    def _mount_partiton(self, partition: str) -> str:
+
+        # Make a dir for the partition inside the existing tmp_dir
+        # most partitions though, will contain the "/" character, so we need to replace it
+        print(f'tmp_dir is {self.tmp_dir}')
+
+        tmp_partition_name = partition.replace('/', '++')
+        partition_tmp_dir = os.path.join(self.tmp_dir, tmp_partition_name)
+
+        os.mkdir(partition_tmp_dir)
+
+        print(f'attempting to mount {partition}')
+        # Actually use guestmount to mount it
+        # guestmount -a /workspace/boot.vmdk -m /dev/sda1  --ro /workspace/t
+        result = subprocess.run(['guestmount', '-a', self.file_meta.path, '-m', partition, '--ro', partition_tmp_dir])
+        if result.returncode != 0:
+            # Could not mount, should remove directory
+            os.rmdir(partition_tmp_dir)
+            raise click.FileError(f'Unable to list partitions for {self.file_meta.path}, aborting unpack')
+
+        return partition_tmp_dir
+
     def unpack(self) -> str:
-        raise NotImplementedError()
+        partitions = self._list_partitions()  # internal partitions inside the blob
+        mounted_partitions = []  # list of mountpoints
+        for partition in partitions:
+            m_part = self._mount_partiton(partition)
+            mounted_partitions.append(m_part)
+
+        return self.tmp_dir
 
 
 class ZipFileUnpackHandler(ArchiveFileUnpackHandler):
@@ -116,7 +157,7 @@ def unpack_recursive(parent_file: FileMetadata, min_file_size) -> list[str]:
                 file_path = os.path.join(root, file)
                 file_meta = file_meta_from_path(file_path)
 
-                if file_meta.size < min_file_size or not is_handled_filetype(file_meta.filetype):
+                if file_meta.size_raw < min_file_size or not is_handled_filetype(file_meta.filetype):
                     continue
 
                 # Current is a valid unpackable archive

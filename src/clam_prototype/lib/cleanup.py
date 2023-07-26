@@ -1,4 +1,5 @@
 import glob
+import os
 import shutil
 import subprocess
 
@@ -35,7 +36,7 @@ class IsoCleanupHandler(BaseCleanupHandler):
         print(f'Cleaning up {self.path} by un-mounting it.')
         result = subprocess.run(['umount', self.path])
         if result.returncode != 0:
-            raise click.FileError(f'Unable to dismount from {self.path}')
+            raise click.FileError(f'Unable to un-mount from {self.path}')
 
         shutil.rmtree(path=self.path, ignore_errors=True)
 
@@ -44,8 +45,36 @@ class VmdkCleanupHandler(BaseCleanupHandler):
     def __init__(self, path: str):
         super().__init__(path)
 
+    @staticmethod
+    def _umount_partition( directory: str) -> bool:
+        print(f'Un-mounting {directory}')
+        rv = True
+        # guestunmount local_dir
+        result = subprocess.run(['guestunmount', directory])
+        if result.returncode != 0:
+            print(f'Unable to unmount {directory}, continuing anyway')
+            rv = False
+
+        return rv
+
     def cleanup(self) -> None:
-        raise NotImplementedError()
+        print(f'Cleaning up {self.path} by un-mounting it all underlying partitions')
+
+        dirs = []
+        for a_dir in os.listdir(self.path):
+            full_path = os.path.join(self.path, a_dir)
+            if os.path.isdir(full_path):
+                dirs.append(full_path)
+
+        success = True
+
+        for a_dir in dirs:
+            success &= self._umount_partition(a_dir)
+
+        if success:
+            shutil.rmtree(path=self.path, ignore_errors=True)
+        else:
+            print('Unable to un-mount all partitions')
 
 
 class TarGzCleanupHandler(BaseCleanupHandler):
