@@ -1,33 +1,19 @@
 import shutil
 import subprocess
-import tempfile
 
 import click
 
-from lib.detect import FileMetadata, FileType
-
-HANDLED_FILETYPES = [
-    FileType.ISO,
-    FileType.TAR,
-    FileType.VMDK,
-    FileType.ZIP,
-    FileType.TARGZ
-]
+from lib.file_data import FileMetadata, FileType
+from lib.tmp_files import make_temp_dir
 
 
 class BaseFileUnpackHandler:
     def __init__(self, file_meta: FileMetadata):
         self.file_meta = file_meta
-        self.tmp_dir = self._make_temp_dir()
+        self.tmp_dir = make_temp_dir()
 
     def unpack(self) -> str:
         raise NotImplementedError()
-
-    def _make_temp_dir(self) -> str:
-        prefix = f'clam_unpacker_{self.file_meta.filetype.get_filetype_short()}_{self.file_meta.get_filename()}_'
-        tmp_dir = tempfile.mkdtemp(prefix=prefix, dir='/tmp')
-
-        return tmp_dir
 
 
 class IsoFileUnpackHandler(BaseFileUnpackHandler):
@@ -80,49 +66,33 @@ class TarGzFileUnpackHandler(BaseFileUnpackHandler):
         return self.tmp_dir
 
 
-def _clean_temp_dir(temp_dir: str):
-    shutil.rmtree(path=temp_dir, ignore_errors=True)
+FILETYPE_HANDLERS = {
+    FileType.TAR: TarFileUnpackHandler,
+    FileType.ISO: IsoFileUnpackHandler,
+    FileType.VMDK: VmdkFileUnpackHandler,
+    FileType.ZIP: ZipFileUnpackHandler,
+    FileType.TARGZ: TarGzFileUnpackHandler,
+}
 
 
-def unmount_iso(self, mount_dir: str) -> None:
-    result = subprocess.run(['umount', mount_dir])
-    if result.returncode != 0:
-        raise click.FileError(f'Unable to dismount from {mount_dir}')
+def _handler_from_file_meta(file_meta: FileMetadata) -> BaseFileUnpackHandler:
+    handler_class = FILETYPE_HANDLERS[file_meta.filetype]
+    return handler_class(file_meta)
 
 
-def handler_from_file_meta(file_meta: FileMetadata) -> BaseFileUnpackHandler:
-    if file_meta.filetype == FileType.TAR:
-        return TarFileUnpackHandler(file_meta)
-    elif file_meta.filetype == FileType.ISO:
-        return IsoFileUnpackHandler(file_meta)
-    elif file_meta.filetype == FileType.VMDK:
-        return VmdkFileUnpackHandler(file_meta)
-    elif file_meta.filetype == FileType.ZIP:
-        return ZipFileUnpackHandler(file_meta)
-    elif file_meta.filetype == FileType.TARGZ:
-        return TarGzFileUnpackHandler(file_meta)
-    else:
-        raise NotImplementedError()
-
-
-def _is_handled_filetype(filetype: FileType) -> bool:
-    return filetype in HANDLED_FILETYPES
+def is_handled_filetype(filetype: FileType) -> bool:
+    return filetype in FILETYPE_HANDLERS.keys()
 
 
 def _do_unpack(file: FileMetadata) -> str:
     print("Doing unpack")
-    # Make a temp dir to work with
-    if not _is_handled_filetype(file.filetype):
+    if not is_handled_filetype(file.filetype):
         raise click.BadParameter(f'Unhandled file type: {file.filetype}')
 
-    handler = handler_from_file_meta(file)
+    handler = _handler_from_file_meta(file)
     dest_dir = handler.unpack()
 
     return dest_dir
-
-
-def cleanup(file: FileMetadata) -> None:
-    pass
 
 
 def unpack(file: FileMetadata) -> str:

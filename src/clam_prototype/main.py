@@ -1,5 +1,5 @@
 import click
-import lib.detect as detect
+import lib.file_data as detect
 import lib.unpackers as unpackers
 
 
