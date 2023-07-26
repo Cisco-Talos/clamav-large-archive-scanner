@@ -1,3 +1,5 @@
+import glob
+import os
 import tempfile
 
 from lib.file_data import FileMetadata, FileType
@@ -14,7 +16,12 @@ def make_temp_dir(file_meta: FileMetadata) -> str:
 # Determine the filetype based on the path, assuming that it was created by make_temp_dir
 def determine_filetype(path: str) -> FileType:
     for filetype in FileType:
-        if filetype.get_filetype_short() in path:
+        if os.path.basename(path).startswith(f'clam_unpacker_{filetype.get_filetype_short()}'):
             return filetype
 
     return FileType.UNKNOWN
+
+
+def find_associated_dirs(filepath: str) -> list[str]:
+    file_name = os.path.basename(filepath)
+    return glob.glob(f'/tmp/clam_unpacker_*_{file_name}_*')

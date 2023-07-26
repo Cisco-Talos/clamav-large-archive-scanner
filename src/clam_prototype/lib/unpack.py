@@ -10,10 +10,21 @@ from lib.tmp_files import make_temp_dir
 class BaseFileUnpackHandler:
     def __init__(self, file_meta: FileMetadata):
         self.file_meta = file_meta
-        self.tmp_dir = make_temp_dir()
+        self.tmp_dir = make_temp_dir(self.file_meta)
 
     def unpack(self) -> str:
         raise NotImplementedError()
+
+
+class ArchiveFileUnpackHandler(BaseFileUnpackHandler):
+    def __init__(self, file_meta: FileMetadata, file_format: str):
+        super().__init__(file_meta)
+        self.format = file_format
+
+    def unpack(self) -> str:
+        shutil.unpack_archive(self.file_meta.path, self.tmp_dir, format=self.format)
+
+        return self.tmp_dir
 
 
 class IsoFileUnpackHandler(BaseFileUnpackHandler):
@@ -28,14 +39,9 @@ class IsoFileUnpackHandler(BaseFileUnpackHandler):
         return self.tmp_dir
 
 
-class TarFileUnpackHandler(BaseFileUnpackHandler):
+class TarFileUnpackHandler(ArchiveFileUnpackHandler):
     def __init__(self, file_meta: FileMetadata):
-        super().__init__(file_meta)
-
-    def unpack(self) -> str:
-        shutil.unpack_archive(self.file_meta.path, self.tmp_dir, format='tar')
-
-        return self.tmp_dir
+        super().__init__(file_meta, 'tar')
 
 
 class VmdkFileUnpackHandler(BaseFileUnpackHandler):
@@ -46,24 +52,14 @@ class VmdkFileUnpackHandler(BaseFileUnpackHandler):
         raise NotImplementedError()
 
 
-class ZipFileUnpackHandler(BaseFileUnpackHandler):
+class ZipFileUnpackHandler(ArchiveFileUnpackHandler):
     def __init__(self, file_meta: FileMetadata):
-        super().__init__(file_meta)
-
-    def unpack(self) -> str:
-        shutil.unpack_archive(self.file_meta.path, self.tmp_dir, format='zip')
-
-        return self.tmp_dir
+        super().__init__(file_meta, 'zip')
 
 
-class TarGzFileUnpackHandler(BaseFileUnpackHandler):
+class TarGzFileUnpackHandler(ArchiveFileUnpackHandler):
     def __init__(self, file_meta: FileMetadata):
-        super().__init__(file_meta)
-
-    def unpack(self) -> str:
-        shutil.unpack_archive(self.file_meta.path, self.tmp_dir, format='gztar')
-
-        return self.tmp_dir
+        super().__init__(file_meta, 'gztar')
 
 
 FILETYPE_HANDLERS = {

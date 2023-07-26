@@ -29,7 +29,6 @@ class FileMetadata:
     def get_filename(self) -> str:
         return os.path.basename(self.path)
 
-
     def as_json(self) -> str:
         return dedent(f'''\
                 {{
@@ -47,18 +46,18 @@ class FileMetadata:
                 Filetype: {self.filetype}''')
 
 
-def _get_filetype(self) -> FileType:
-    if self.desc.startswith('POSIX tar archive'):
+def _get_filetype(desc) -> FileType:
+    if desc.startswith('POSIX tar archive'):
         return FileType.TAR
-    elif self.desc.startswith('POSIX tar archive (GNU)'):
+    elif desc.startswith('POSIX tar archive (GNU)'):
         return FileType.TAR
-    elif self.desc.startswith('Zip archive data'):
+    elif desc.startswith('Zip archive data'):
         return FileType.ZIP
-    elif self.desc.startswith('ISO 9660 CD-ROM filesystem data'):
+    elif desc.startswith('ISO 9660 CD-ROM filesystem data'):
         return FileType.ISO
-    elif self.desc.startswith('VMware4 disk image'):
+    elif desc.startswith('VMware4 disk image'):
         return FileType.VMDK
-    elif self.desc.startswith('gzip compressed data'):
+    elif desc.startswith('gzip compressed data'):
         return FileType.TARGZ
     else:
         return FileType.UNKNOWN
@@ -69,7 +68,7 @@ def file_meta_from_path(path: str) -> 'FileMetadata':
     rv.path = path
     rv.desc = magic.from_file(path, mime=False)
     rv.size = os.path.getsize(path)
-    rv.filetype = _get_filetype()
+    rv.filetype = _get_filetype(rv.desc)
 
     return rv
 
