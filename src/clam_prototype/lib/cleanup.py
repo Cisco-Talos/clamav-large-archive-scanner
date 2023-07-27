@@ -49,14 +49,14 @@ class GuestFSCleanupHandler(BaseCleanupHandler):
     def cleanup(self) -> None:
         print(f'Cleaning up {self.path} by un-mounting it all underlying partitions')
 
-        # Find all mountpoints
+        # Find all mount-points in the directory
         dirs = []
         for a_dir in os.listdir(self.path):
             full_path = os.path.join(self.path, a_dir)
             if os.path.isdir(full_path):
                 dirs.append(full_path)
 
-        success = True
+        all_success = True
 
         for a_dir in dirs:
             try:
@@ -65,10 +65,10 @@ class GuestFSCleanupHandler(BaseCleanupHandler):
             except MountException as e:
                 print(f'Unable to unmount {a_dir}, continuing anyway')
                 print(f'Got the following mount error: {e}')
-                success = False
+                all_success = False
                 continue
 
-        if success:
+        if all_success:
             shutil.rmtree(path=self.path, ignore_errors=True)
         else:
             print('Unable to un-mount all partitions')
