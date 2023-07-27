@@ -1,11 +1,10 @@
-import glob
 import os
 import shutil
-import subprocess
 
 import click
 
-from lib.file_data import FileMetadata, FileType
+from lib.file_data import FileType
+from lib.mount_tools import umount_iso, MountException, umount_guestfs_partition
 from lib.tmp_files import determine_filetype, find_associated_dirs
 
 
@@ -34,32 +33,23 @@ class IsoCleanupHandler(BaseCleanupHandler):
 
     def cleanup(self) -> None:
         print(f'Cleaning up {self.path} by un-mounting it.')
-        result = subprocess.run(['umount', self.path])
-        if result.returncode != 0:
+        try:
+            umount_iso(self.path)
+        except MountException as e:
             raise click.FileError(f'Unable to un-mount from {self.path}')
 
         shutil.rmtree(path=self.path, ignore_errors=True)
 
 
-class VmdkCleanupHandler(BaseCleanupHandler):
+# Handles VMDK and QCOW2
+class GuestFSCleanupHandler(BaseCleanupHandler):
     def __init__(self, path: str):
         super().__init__(path)
-
-    @staticmethod
-    def _umount_partition( directory: str) -> bool:
-        print(f'Un-mounting {directory}')
-        rv = True
-        # guestunmount local_dir
-        result = subprocess.run(['guestunmount', directory])
-        if result.returncode != 0:
-            print(f'Unable to unmount {directory}, continuing anyway')
-            rv = False
-
-        return rv
 
     def cleanup(self) -> None:
         print(f'Cleaning up {self.path} by un-mounting it all underlying partitions')
 
+        # Find all mountpoints
         dirs = []
         for a_dir in os.listdir(self.path):
             full_path = os.path.join(self.path, a_dir)
@@ -69,7 +59,14 @@ class VmdkCleanupHandler(BaseCleanupHandler):
         success = True
 
         for a_dir in dirs:
-            success &= self._umount_partition(a_dir)
+            try:
+                print(f'Un-mounting {a_dir}')
+                umount_guestfs_partition(a_dir)
+            except MountException as e:
+                print(f'Unable to unmount {a_dir}, continuing anyway')
+                print(f'Got the following mount error: {e}')
+                success = False
+                continue
 
         if success:
             shutil.rmtree(path=self.path, ignore_errors=True)
@@ -86,8 +83,9 @@ FILETYPE_HANDLERS = {
     FileType.TAR: TarCleanupHandler,
     FileType.ZIP: ZipCleanupHandler,
     FileType.ISO: IsoCleanupHandler,
-    FileType.VMDK: VmdkCleanupHandler,
+    FileType.VMDK: GuestFSCleanupHandler,
     FileType.TARGZ: TarGzCleanupHandler,
+    FileType.QCOW2: GuestFSCleanupHandler,
 }
 
 
@@ -95,6 +93,7 @@ def _cleanup_file(filepath: str, only_one: bool) -> None:
     files = find_associated_dirs(filepath)
     if len(files) == 0:
         print(f'No associated directories found for {filepath}')
+        return
 
     if only_one:
         print(f'Found an associated directory for {filepath}')

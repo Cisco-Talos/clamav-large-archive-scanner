@@ -46,8 +46,8 @@ class FileMetadata:
         return dedent(f'''\
                 Path: {self.path} 
                 Description: {self.desc}
-                Size: {humanize.naturalsize(self.size_raw)}
-                Filetype: {self.filetype}''')
+                Size: {humanize.naturalsize(self.size_raw, binary=True)}
+                Filetype: {self.filetype.get_filetype_short()}''')
 
 
 def _get_filetype(desc) -> FileType:

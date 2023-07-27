@@ -1,10 +1,10 @@
 import os
 import shutil
-import subprocess
 
 import click
 
 from lib.file_data import FileMetadata, FileType, file_meta_from_path
+from lib.mount_tools import mount_iso, MountException, enumerate_guesfs_partitions, mount_guestfs_partition
 from lib.tmp_files import make_temp_dir
 
 
@@ -33,9 +33,11 @@ class IsoFileUnpackHandler(BaseFileUnpackHandler):
         super().__init__(file_meta)
 
     def unpack(self) -> str:
-        result = subprocess.run(['mount', '-r', '-o', 'loop', self.file_meta.path, self.tmp_dir])
-        if result.returncode != 0:
-            raise click.FileError(f'Unable to mount {self.file_meta.path} to {self.tmp_dir}')
+        try:
+            mount_iso(self.file_meta.path, self.tmp_dir)
+        except MountException as e:
+            # TODO: Log the error from subprocess?
+            click.FileError(f'Unable to mount {self.file_meta.path} to {self.tmp_dir}')
 
         return self.tmp_dir
 
@@ -45,51 +47,31 @@ class TarFileUnpackHandler(ArchiveFileUnpackHandler):
         super().__init__(file_meta, 'tar')
 
 
-class VmdkFileUnpackHandler(BaseFileUnpackHandler):
+# Handles VMDK and QCOW2
+class GuestFSFileUnpackHandler(BaseFileUnpackHandler):
     def __init__(self, file_meta: FileMetadata):
         super().__init__(file_meta)
 
-    # These VM Filesystem images can have multiple partitions
-    # These need to be mounted individually
-    def _list_partitions(self) -> list[str]:
-        result = subprocess.run(['virt-filesystems', '-a', self.file_meta.path], capture_output=True, text=True)
-        if result.returncode != 0:
-            raise click.FileError(f'Unable to list partitions for {self.file_meta.path}, aborting unpack')
-
-        partitions = [x for x in result.stdout.split('\n') if x != '']
-
-        print(f'partitions is {partitions}')
-
-        return partitions
-
-    def _mount_partiton(self, partition: str) -> str:
-
-        # Make a dir for the partition inside the existing tmp_dir
-        # most partitions though, will contain the "/" character, so we need to replace it
-        print(f'tmp_dir is {self.tmp_dir}')
-
-        tmp_partition_name = partition.replace('/', '++')
-        partition_tmp_dir = os.path.join(self.tmp_dir, tmp_partition_name)
-
-        os.mkdir(partition_tmp_dir)
-
-        print(f'attempting to mount {partition}')
-        # Actually use guestmount to mount it
-        # guestmount -a /workspace/boot.vmdk -m /dev/sda1  --ro /workspace/t
-        result = subprocess.run(['guestmount', '-a', self.file_meta.path, '-m', partition, '--ro', partition_tmp_dir])
-        if result.returncode != 0:
-            # Could not mount, should remove directory
-            os.rmdir(partition_tmp_dir)
-            raise click.FileError(f'Unable to list partitions for {self.file_meta.path}, aborting unpack')
-
-        return partition_tmp_dir
-
     def unpack(self) -> str:
-        partitions = self._list_partitions()  # internal partitions inside the blob
-        mounted_partitions = []  # list of mountpoints
+        try:
+            # These VM Filesystem images can have multiple partitions
+            # These need to be mounted individually
+            partitions = enumerate_guesfs_partitions(self.file_meta.path)  # internal partitions inside the blob
+
+            print(f'Found the following partitions:')
+            print('\n'.join(partitions))
+
+        except MountException as e:
+            # TODO: Log the error from subprocess?
+            raise click.FileError(f'Unable to list partitions for {self.file_meta.path}, aborting unpack')
+
         for partition in partitions:
-            m_part = self._mount_partiton(partition)
-            mounted_partitions.append(m_part)
+            try:
+                print(f'attempting to mount {partition}')
+                mount_guestfs_partition(self.file_meta.path, partition, self.tmp_dir)
+            except MountException as e:
+                # TODO: Log the error from subprocess?
+                print(f'Unable to mount the {partition} for {self.file_meta.path}, attempting to continue anyway')
 
         return self.tmp_dir
 
@@ -107,9 +89,10 @@ class TarGzFileUnpackHandler(ArchiveFileUnpackHandler):
 FILETYPE_HANDLERS = {
     FileType.TAR: TarFileUnpackHandler,
     FileType.ISO: IsoFileUnpackHandler,
-    FileType.VMDK: VmdkFileUnpackHandler,
+    FileType.VMDK: GuestFSFileUnpackHandler,
     FileType.ZIP: ZipFileUnpackHandler,
     FileType.TARGZ: TarGzFileUnpackHandler,
+    FileType.QCOW2: GuestFSFileUnpackHandler,
 }
 
 
