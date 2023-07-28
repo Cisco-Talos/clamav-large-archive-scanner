@@ -1,4 +1,5 @@
 import json
+import stat
 from enum import Enum
 from textwrap import dedent
 
@@ -9,13 +10,19 @@ import os
 
 class FileType(Enum):
     # OVA and TAR both magic out to TAR
-    TAR = (1, "tar")
-    ZIP = (2, "zip")
-    ISO = (3, "iso")
-    VMDK = (4, "vmdk")
-    TARGZ = (5, "tar.gz")
-    QCOW2 = (6, "qcow2")
-    UNKNOWN = (99, "unknown")
+    TAR = (1, 'tar')
+    ZIP = (2, 'zip')
+    ISO = (3, 'iso')
+    VMDK = (4, 'vmdk')
+    TARGZ = (5, 'tar.gz')
+    QCOW2 = (6, 'qcow2')
+
+    # These are not really filetypes, but are used to indicate the type of file
+    SOCKET = (95, 'socket')
+    DIR = (96, 'dir')
+    LINK = (97, 'link')
+    DOES_NOT_EXIST = (98, 'does_not_exist')  # file_meta_from_path can be called on broken symlinks
+    UNKNOWN = (99, 'unknown')
 
     def get_filetype_short(self):
         return self.value[1]
@@ -69,12 +76,36 @@ def _get_filetype(desc) -> FileType:
         return FileType.UNKNOWN
 
 
+def _is_socket(path: str) -> bool:
+    s = os.lstat(path).st_mode
+    return stat.S_ISSOCK(s)
+
+
 def file_meta_from_path(path: str) -> 'FileMetadata':
     rv = FileMetadata()
     rv.path = path
-    rv.desc = magic.from_file(path, mime=False)
-    rv.size_raw = os.path.getsize(path)
-    rv.filetype = _get_filetype(rv.desc)
+    # Make sure the file exists before trying to get metadata
+    if os.path.exists(path):
+
+        # There are some types that we need to ignore
+        if os.path.islink(path):
+            rv.filetype = FileType.LINK
+            return rv
+        elif os.path.isdir(path):
+            rv.filetype = FileType.DIR
+            return rv
+        elif _is_socket(path):
+            rv.filetype = FileType.SOCKET
+            return rv
+
+        rv.desc = magic.from_file(path, mime=False)
+        rv.size_raw = os.path.getsize(path)
+        rv.filetype = _get_filetype(rv.desc)
+
+
+
+    else:
+        rv.filetype = FileType.DOES_NOT_EXIST
 
     return rv
 

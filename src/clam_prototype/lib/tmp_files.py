@@ -10,7 +10,7 @@ def make_temp_dir(file_meta: FileMetadata) -> str:
     if not file_meta.root_meta:
         prefix = f'clam_unpacker_{file_meta.filetype.get_filetype_short()}_{file_meta.get_filename()}_'
     else:
-        prefix = f'clam_unpacker_{file_meta.filetype.get_filetype_short()}_p-{file_meta.root_meta.get_filename()}-p_{file_meta.get_filename()}_'
+        prefix = f'clam_unpacker_{file_meta.filetype.get_filetype_short()}-p_{file_meta.root_meta.get_filename()}_p-{file_meta.get_filename()}_'
     tmp_dir = tempfile.mkdtemp(prefix=prefix, dir='/tmp')
 
     return tmp_dir

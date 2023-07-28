@@ -8,6 +8,10 @@ from lib.mount_tools import mount_iso, MountException, enumerate_guesfs_partitio
 from lib.tmp_files import make_temp_dir
 
 
+class ArchiveException(Exception):
+    pass
+
+
 class BaseFileUnpackHandler:
     def __init__(self, file_meta: FileMetadata):
         self.file_meta = file_meta
@@ -23,7 +27,11 @@ class ArchiveFileUnpackHandler(BaseFileUnpackHandler):
         self.format = file_format
 
     def unpack(self) -> str:
-        shutil.unpack_archive(self.file_meta.path, self.tmp_dir, format=self.format)
+        # This can sometimes fail if the archive is corrupt
+        try:
+            shutil.unpack_archive(self.file_meta.path, self.tmp_dir, format=self.format)
+        except Exception as e:
+            raise ArchiveException(e)
 
         return self.tmp_dir
 
@@ -86,6 +94,15 @@ class TarGzFileUnpackHandler(ArchiveFileUnpackHandler):
         super().__init__(file_meta, 'gztar')
 
 
+# Directories don't need unpacked, this just fits it into the same pattern
+class DirFileUnpackHandler:
+    def __init__(self, file_meta: FileMetadata):
+        self.file_meta = file_meta
+
+    def unpack(self) -> str:
+        return self.file_meta.path
+
+
 FILETYPE_HANDLERS = {
     FileType.TAR: TarFileUnpackHandler,
     FileType.ISO: IsoFileUnpackHandler,
@@ -93,6 +110,7 @@ FILETYPE_HANDLERS = {
     FileType.ZIP: ZipFileUnpackHandler,
     FileType.TARGZ: TarGzFileUnpackHandler,
     FileType.QCOW2: GuestFSFileUnpackHandler,
+    FileType.DIR: DirFileUnpackHandler,
 }
 
 
@@ -117,7 +135,12 @@ def _do_unpack(file: FileMetadata) -> str:
 
 
 def unpack(file: FileMetadata) -> str:
-    return _do_unpack(file)
+    try:
+        return _do_unpack(file)
+    except ArchiveException as e:
+        raise click.FileError(f'Unable to unpack {file.path}, got the following error: {e}')
+
+
 
 
 def unpack_recursive(parent_file: FileMetadata, min_file_size) -> list[str]:
@@ -144,11 +167,16 @@ def unpack_recursive(parent_file: FileMetadata, min_file_size) -> list[str]:
                     continue
 
                 # Current is a valid unpackable archive
-                print(f'Found archive: {file_path}')
+                print(f'Found archive:')
+                print(file_meta)
                 file_meta.root_meta = parent_file
 
-                unpack_dir = _do_unpack(file_meta)
-                unpacked_dirs.append(unpack_dir)
-                dirs_to_inspect.append(unpack_dir)
+                try:
+                    unpack_dir = _do_unpack(file_meta)
+                    unpacked_dirs.append(unpack_dir)
+                    dirs_to_inspect.append(unpack_dir)
+                except ArchiveException as e:
+                    print(f'Unable to unpack {file.path}, got the following error: {e}. Continuing anyway')
+
 
     return unpacked_dirs

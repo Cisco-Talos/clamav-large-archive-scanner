@@ -18,6 +18,7 @@ def cli():
 
 @cli.command()
 @click.argument('path', type=click.Path(exists=True, resolve_path=True))
+# @click.argument('path', type=click.Path(exists=False, resolve_path=True))
 @click.option('-r', '--recursive', is_flag=True, help='Recursively unpack files')
 @click.option('--min-size', default=DEFAULT_MIN_SIZE_THRESHOLD_BYTES,
               help=f'Minimum file size to unpack (default: {DEFAULT_MIN_SIZE_HUMAN})', type=str)
@@ -33,12 +34,17 @@ def unpack(path, recursive, min_size, ignore_size):
     if ignore_size:
         min_file_size = 0
 
-    # Check if filesize is < min-size
-    # If so, do not try to unpack it, unless --ignore-size is passed
-    if file_meta.size_raw < min_file_size:
-        print(
-            f'File size is below the threshold of {DEFAULT_MIN_SIZE_HUMAN}, not unpacking. See help for options')
-        return
+    # In the special case where a directory is specified, we're just going to do recursive unpack on the dir
+    if file_meta.filetype == detect.FileType.DIR:
+        recursive = True
+
+    else:
+        # Check if filesize is < min-size for non directories
+        # If so, do not try to unpack it, unless --ignore-size is passed
+        if file_meta.size_raw < min_file_size:
+            print(
+                f'File size is below the threshold of {DEFAULT_MIN_SIZE_HUMAN}, not unpacking. See help for options')
+            return
 
     if recursive:
         unpack_dirs = unpacker.unpack_recursive(file_meta, min_file_size)
@@ -51,21 +57,16 @@ def unpack(path, recursive, min_size, ignore_size):
 
 @cli.command()
 @click.argument('path', type=click.Path(exists=True, resolve_path=True))
-@click.option('-r', '--recursive', is_flag=True,
-              help='Recursively cleanup directories associated with the file, --file is assumed to be true')
-@click.option('--file', 'is_file', is_flag=True, help='Attempt to clean up using the file as a reference')
-def cleanup(path, recursive, is_file):
+@click.option('--file', 'is_file', is_flag=True, help='Recursively cleanup directories associated with the file ')
+def cleanup(path, is_file):
     print(f'Attempting to clean up {path}')
 
-    if recursive:
+    if is_file:
         cleaner.cleanup_recursive(path)
-        print(f'Cleaned up recursively {path}')
     else:
-        if not is_file:
-            cleaner.cleanup_path(path)
-        else:
-            cleaner.cleanup_file(path)
-        print(f'Cleaned up  {path}')
+        cleaner.cleanup_path(path)
+
+    print(f'Cleaned up  {path}')
 
 
 if __name__ == "__main__":
