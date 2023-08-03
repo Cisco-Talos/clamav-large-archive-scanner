@@ -5,6 +5,7 @@ import lib.unpack as unpacker
 import lib.cleanup as cleaner
 
 import lib.file_data as detect
+from lib import fast_log
 from lib.filesize import convert_human_to_machine_bytes
 
 DEFAULT_MIN_SIZE_THRESHOLD_BYTES = 2 * 1024 * 1024 * 1024  # 2GB
@@ -13,6 +14,7 @@ DEFAULT_MIN_SIZE_HUMAN = humanize.naturalsize(DEFAULT_MIN_SIZE_THRESHOLD_BYTES, 
 
 @click.group()
 def cli():
+    fast_log.log_start()
     pass
 
 

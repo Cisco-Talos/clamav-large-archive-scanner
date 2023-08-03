@@ -3,13 +3,14 @@ import shutil
 
 import click
 
+from lib.fast_log import fast_log
 from lib.file_data import FileMetadata, FileType, file_meta_from_path
 from lib.mount_tools import mount_iso, MountException, enumerate_guesfs_partitions, mount_guestfs_partition
 from lib.tmp_files import make_temp_dir
 
 
 class ArchiveException(Exception):
-    pass
+    tmp_path = ""
 
 
 class BaseFileUnpackHandler:
@@ -31,7 +32,9 @@ class ArchiveFileUnpackHandler(BaseFileUnpackHandler):
         try:
             shutil.unpack_archive(self.file_meta.path, self.tmp_dir, format=self.format)
         except Exception as e:
-            raise ArchiveException(e)
+            ae = ArchiveException(e)
+            ae.tmp_path = self.tmp_dir
+            raise ae
 
         return self.tmp_dir
 
@@ -77,6 +80,7 @@ class GuestFSFileUnpackHandler(BaseFileUnpackHandler):
             try:
                 print(f'attempting to mount {partition}')
                 mount_guestfs_partition(self.file_meta.path, partition, self.tmp_dir)
+                print(f'Mounted {partition} to {self.tmp_dir}')
             except MountException as e:
                 # TODO: Log the error from subprocess?
                 print(f'Unable to mount the {partition} for {self.file_meta.path}, attempting to continue anyway')
@@ -113,6 +117,8 @@ FILETYPE_HANDLERS = {
     FileType.DIR: DirFileUnpackHandler,
 }
 
+HANDLED_FILE_TYPES = FILETYPE_HANDLERS.keys()
+
 
 def _handler_from_file_meta(file_meta: FileMetadata) -> BaseFileUnpackHandler:
     handler_class = FILETYPE_HANDLERS[file_meta.filetype]
@@ -120,7 +126,7 @@ def _handler_from_file_meta(file_meta: FileMetadata) -> BaseFileUnpackHandler:
 
 
 def is_handled_filetype(filetype: FileType) -> bool:
-    return filetype in FILETYPE_HANDLERS.keys()
+    return filetype in HANDLED_FILE_TYPES
 
 
 def _do_unpack(file: FileMetadata) -> str:
@@ -141,8 +147,6 @@ def unpack(file: FileMetadata) -> str:
         raise click.FileError(f'Unable to unpack {file.path}, got the following error: {e}')
 
 
-
-
 def unpack_recursive(parent_file: FileMetadata, min_file_size) -> list[str]:
     unpacked_dirs = list()
 
@@ -157,13 +161,18 @@ def unpack_recursive(parent_file: FileMetadata, min_file_size) -> list[str]:
     # Go until all archives are unpacked and inspected
     while len(dirs_to_inspect) > 0:
         current_dir = dirs_to_inspect.pop()
-
+        print(f'Analyzing {current_dir} for additional archives')
         for root, _, files in os.walk(current_dir):
+            fast_log(f'Looking at {root}')
             for file in files:
                 file_path = os.path.join(root, file)
+                fast_log(f'Looking at at {file_path}')
                 file_meta = file_meta_from_path(file_path)
 
-                if file_meta.size_raw < min_file_size or not is_handled_filetype(file_meta.filetype):
+                fast_log(f'Got meta from at {file_path}, type is {file_meta.filetype}')
+
+                if not is_handled_filetype(file_meta.filetype) or file_meta.size_raw < min_file_size:
+                    fast_log('File too small or not handled, moving on')
                     continue
 
                 # Current is a valid unpackable archive
@@ -176,7 +185,8 @@ def unpack_recursive(parent_file: FileMetadata, min_file_size) -> list[str]:
                     unpacked_dirs.append(unpack_dir)
                     dirs_to_inspect.append(unpack_dir)
                 except ArchiveException as e:
-                    print(f'Unable to unpack {file.path}, got the following error: {e}. Continuing anyway')
-
+                    print(f'Unable to unpack {file_path}, got the following error: {e}. Continuing anyway')
+                    # Delete the temp file
+                    shutil.rmtree(e.tmp_path, ignore_errors=True)
 
     return unpacked_dirs

@@ -18,9 +18,7 @@ class FileType(Enum):
     QCOW2 = (6, 'qcow2')
 
     # These are not really filetypes, but are used to indicate the type of file
-    SOCKET = (95, 'socket')
-    DIR = (96, 'dir')
-    LINK = (97, 'link')
+    DIR = (97, 'dir')
     DOES_NOT_EXIST = (98, 'does_not_exist')  # file_meta_from_path can be called on broken symlinks
     UNKNOWN = (99, 'unknown')
 
@@ -38,16 +36,6 @@ class FileMetadata:
 
     def get_filename(self) -> str:
         return os.path.basename(self.path)
-
-    # Maybe don't need?
-    # def as_json(self) -> str:
-    #     return dedent(f'''\
-    #             {{
-    #                 "path": "{self.path}",
-    #                 "desc": "{self.desc}",
-    #                 "size": {self.size},
-    #                 "filetype": "{self.filetype}"
-    #             }}''')
 
     def __str__(self):
         return dedent(f'''\
@@ -76,9 +64,9 @@ def _get_filetype(desc) -> FileType:
         return FileType.UNKNOWN
 
 
-def _is_socket(path: str) -> bool:
+def _is_regular_file(path: str) -> bool:
     s = os.lstat(path).st_mode
-    return stat.S_ISSOCK(s)
+    return stat.S_ISREG(s)
 
 
 def file_meta_from_path(path: str) -> 'FileMetadata':
@@ -87,22 +75,18 @@ def file_meta_from_path(path: str) -> 'FileMetadata':
     # Make sure the file exists before trying to get metadata
     if os.path.exists(path):
 
-        # There are some types that we need to ignore
-        if os.path.islink(path):
-            rv.filetype = FileType.LINK
-            return rv
-        elif os.path.isdir(path):
+        # Only handle regular files and directories for now
+        if os.path.isdir(path):
             rv.filetype = FileType.DIR
             return rv
-        elif _is_socket(path):
-            rv.filetype = FileType.SOCKET
+        elif not _is_regular_file(path):
+            # We can probably figure this out, but it doesn't serve a purpose right now
+            rv.filetype = FileType.UNKNOWN
             return rv
 
         rv.desc = magic.from_file(path, mime=False)
         rv.size_raw = os.path.getsize(path)
         rv.filetype = _get_filetype(rv.desc)
-
-
 
     else:
         rv.filetype = FileType.DOES_NOT_EXIST
