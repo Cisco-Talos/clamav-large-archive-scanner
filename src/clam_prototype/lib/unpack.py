@@ -32,9 +32,9 @@ class ArchiveFileUnpackHandler(BaseFileUnpackHandler):
         try:
             shutil.unpack_archive(self.file_meta.path, self.tmp_dir, format=self.format)
         except Exception as e:
-            ae = ArchiveException(e)
-            ae.tmp_path = self.tmp_dir
-            raise ae
+            # Delete the temp dir since the unpacker created it
+            shutil.rmtree(self.tmp_dir, ignore_errors=True)
+            raise ArchiveException(e)
 
         return self.tmp_dir
 
@@ -186,7 +186,5 @@ def unpack_recursive(parent_file: FileMetadata, min_file_size) -> list[str]:
                     dirs_to_inspect.append(unpack_dir)
                 except ArchiveException as e:
                     print(f'Unable to unpack {file_path}, got the following error: {e}. Continuing anyway')
-                    # Delete the temp file
-                    shutil.rmtree(e.tmp_path, ignore_errors=True)
 
     return unpacked_dirs

@@ -13,9 +13,10 @@ DEFAULT_MIN_SIZE_HUMAN = humanize.naturalsize(DEFAULT_MIN_SIZE_THRESHOLD_BYTES, 
 
 
 @click.group()
-def cli():
-    fast_log.log_start()
-    pass
+@click.option('-t', '--trace', is_flag=True, default=False, help=f'Log all actions to {fast_log.LOG_FILE}')
+def cli(trace):
+    if trace:
+        fast_log.log_start()
 
 
 @cli.command()
@@ -31,7 +32,10 @@ def unpack(path, recursive, min_size, ignore_size):
 
     print(f'Got file metadata: \n{file_meta}')
 
-    min_file_size = convert_human_to_machine_bytes(min_size)
+    try:
+        min_file_size = convert_human_to_machine_bytes(min_size)
+    except ValueError as e:
+        raise click.BadParameter(f'Unable to parse min-size: {e}')
 
     if ignore_size:
         min_file_size = 0
