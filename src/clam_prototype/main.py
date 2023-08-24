@@ -1,10 +1,9 @@
 import click
 import humanize
 
-import lib.unpack as unpacker
 import lib.cleanup as cleaner
-
 import lib.file_data as detect
+import lib.unpack as unpacker
 from lib import fast_log
 from lib.filesize import convert_human_to_machine_bytes
 
@@ -13,8 +12,10 @@ DEFAULT_MIN_SIZE_HUMAN = humanize.naturalsize(DEFAULT_MIN_SIZE_THRESHOLD_BYTES, 
 
 
 @click.group()
-@click.option('-t', '--trace', is_flag=True, default=False, help=f'Enable trace logging. By default, log all actions to {fast_log.LOG_FILE}')
-@click.option('--trace-file', default=None, type=click.Path(resolve_path=True), help=f'Override the default trace log file')
+@click.option('-t', '--trace', is_flag=True, default=False,
+              help=f'Enable trace logging. By default, log all actions to {fast_log.LOG_FILE}')
+@click.option('--trace-file', default=None, type=click.Path(resolve_path=True),
+              help=f'Override the default trace log file')
 def cli(trace, trace_file):
     if trace:
         fast_log.log_start(trace_file)

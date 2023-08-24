@@ -1,11 +1,11 @@
 import json
+import os
 import stat
 from enum import Enum
 from textwrap import dedent
 
 import humanize
 import magic
-import os
 
 
 class FileType(Enum):
