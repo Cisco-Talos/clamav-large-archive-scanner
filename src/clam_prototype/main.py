@@ -13,10 +13,11 @@ DEFAULT_MIN_SIZE_HUMAN = humanize.naturalsize(DEFAULT_MIN_SIZE_THRESHOLD_BYTES, 
 
 
 @click.group()
-@click.option('-t', '--trace', is_flag=True, default=False, help=f'Log all actions to {fast_log.LOG_FILE}')
-def cli(trace):
+@click.option('-t', '--trace', is_flag=True, default=False, help=f'Enable trace logging. By default, log all actions to {fast_log.LOG_FILE}')
+@click.option('--trace-file', default=None, type=click.Path(resolve_path=True), help=f'Override the default trace log file')
+def cli(trace, trace_file):
     if trace:
-        fast_log.log_start()
+        fast_log.log_start(trace_file)
 
 
 @cli.command()

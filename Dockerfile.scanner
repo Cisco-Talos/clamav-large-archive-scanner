@@ -9,8 +9,8 @@ RUN set -eux; \
 # RUN apt-get -y install libguestfs-tools 7zip
 # RUN apt-get -y install libguestfs-tools 
 
-# Guestfs Stuff
-RUN apt-get install -y libguestfs-tools linux-image-5.15.0-76-generic 
+# Guestfs Stuff - This linux image version does change over time...
+RUN apt-get install -y libguestfs-tools linux-image-5.15.0-78-generic 
 # RUN guestfish -a /dev/null run
 
 
@@ -25,8 +25,11 @@ COPY requirements.txt /workspace
 RUN pip3 install -r requirements.txt
 
 
-# Not needed just faster
-RUN mkdir /mnt/t_m_1
+RUN mkdir -p /scanner
+
+# Copy the scanner code
+COPY src/clam_prototype/lib /scanner/lib
+COPY src/clam_prototype/main.py /scanner
 
 # TODO: Remove APT Cache
 # RUN rm -rf /var/lib/apt/lists/*

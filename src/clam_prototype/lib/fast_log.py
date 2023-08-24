@@ -8,12 +8,16 @@ LOG_FILE = '/tmp/clam_unpacker.log'
 _logger = None
 
 
-def log_start():
+def log_start(log_file_path: str = LOG_FILE):
     global _logger
-    # Delete the log file
-    Path(LOG_FILE).unlink(missing_ok=True)
 
-    _logger = LogInit(pathName=LOG_FILE, console=False, colors=True)
+    if not log_file_path:
+        log_file_path = LOG_FILE
+
+    # Delete the log file
+    Path(log_file_path).unlink(missing_ok=True)
+
+    _logger = LogInit(pathName=log_file_path, console=False, colors=True)
 
 
 def fast_log(msg: str):
