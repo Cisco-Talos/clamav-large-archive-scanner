@@ -1,0 +1,3 @@
+pytest~=7.4
+pytest-mock~=3.11
+coverage~=7.3

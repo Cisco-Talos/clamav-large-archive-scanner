@@ -3,14 +3,11 @@ import shutil
 
 import click
 
+from lib.exceptions import ArchiveException, MountException
 from lib.fast_log import fast_log
 from lib.file_data import FileMetadata, FileType, file_meta_from_path
-from lib.mount_tools import mount_iso, MountException, enumerate_guesfs_partitions, mount_guestfs_partition
+from lib.mount_tools import mount_iso, enumerate_guesfs_partitions, mount_guestfs_partition
 from lib.tmp_files import make_temp_dir
-
-
-class ArchiveException(Exception):
-    tmp_path = ""
 
 
 class BaseFileUnpackHandler:
@@ -48,7 +45,7 @@ class IsoFileUnpackHandler(BaseFileUnpackHandler):
             mount_iso(self.file_meta.path, self.tmp_dir)
         except MountException as e:
             # TODO: Log the error from subprocess?
-            click.FileError(f'Unable to mount {self.file_meta.path} to {self.tmp_dir}')
+            click.FileError(hint=f'Unable to mount {self.file_meta.path} to {self.tmp_dir}')
 
         return self.tmp_dir
 
@@ -74,7 +71,7 @@ class GuestFSFileUnpackHandler(BaseFileUnpackHandler):
 
         except MountException as e:
             # TODO: Log the error from subprocess?
-            raise click.FileError(f'Unable to list partitions for {self.file_meta.path}, aborting unpack')
+            raise click.FileError(filename=self.file_meta.path, hint=f'Unable to list partitions for {self.file_meta.path}, aborting unpack')
 
         for partition in partitions:
             try:
@@ -144,7 +141,7 @@ def unpack(file: FileMetadata) -> str:
     try:
         return _do_unpack(file)
     except ArchiveException as e:
-        raise click.FileError(f'Unable to unpack {file.path}, got the following error: {e}')
+        raise click.FileError(hint=f'Unable to unpack {file.path}, got the following error: {e}')
 
 
 def unpack_recursive(parent_file: FileMetadata, min_file_size) -> list[str]:

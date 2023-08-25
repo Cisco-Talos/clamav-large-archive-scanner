@@ -3,11 +3,8 @@
 import os
 import subprocess
 
+from lib.exceptions import MountException
 from lib.fast_log import fast_log
-
-
-class MountException(Exception):
-    pass
 
 
 def enumerate_guesfs_partitions(file_path: str) -> list[str]:
@@ -77,3 +74,13 @@ def umount_iso(mount_point: str) -> None:
     if result.returncode != 0:
         combined_output = str(result.stdout) + '\n' + str(result.stderr)
         raise MountException(combined_output)
+
+
+def list_top_level_dirs(path: str) -> list[str]:
+    dirs = []
+    for a_dir in os.listdir(path):
+        full_path = os.path.join(path, a_dir)
+        if os.path.isdir(full_path):
+            dirs.append(full_path)
+
+    return dirs
