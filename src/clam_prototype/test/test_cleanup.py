@@ -2,6 +2,7 @@
 from unittest.mock import MagicMock, call
 
 import click
+# noinspection PyPackageRequirements
 import pytest
 from pytest_mock import MockerFixture
 
