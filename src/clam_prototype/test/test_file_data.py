@@ -33,8 +33,10 @@ def setup_and_teardown(mocker: MockerFixture, mock_os, mock_magic):
     pass
 
 
-def test_file_meta_get_filename():
+def test_file_meta_get_filename(mock_os):
     from lib.file_data import FileMetadata
+
+    mock_os.path.basename.return_value = 'some_test_path'
 
     file_meta = FileMetadata()
     file_meta.path = EXPECTED_TEST_PATH
@@ -89,6 +91,18 @@ def _mock_is_dir(mock_os, is_dir):
     mock_os.path.isdir.return_value = is_dir
 
 
+def _assert_handled_file_calls(mock_os, mock_magic, expected_path):
+    mock_os.path.exists.assert_called_once_with(expected_path)
+    mock_os.path.getsize.assert_called_once_with(expected_path)
+    mock_magic.from_file.assert_called_once_with(expected_path, mime=False)
+
+
+def _assert_unhandled_file_calls(mock_os, mock_magic, expected_path):
+    mock_os.path.exists.assert_called_once_with(expected_path)
+    mock_os.path.getsize.assert_not_called()
+    mock_magic.from_file.assert_not_called()
+
+
 def test_file_meta_from_path(mock_os, mock_magic):
     from lib.file_data import file_meta_from_path
     _mock_file_type_regular(mock_os, True)
@@ -106,9 +120,7 @@ def test_file_meta_from_path(mock_os, mock_magic):
     assert file_meta.size_raw == expected_file_size
     assert file_meta.filetype == FileType.QCOW2
 
-    mock_os.path.exists.assert_called_once_with(EXPECTED_TEST_PATH)
-    mock_os.path.getsize.assert_called_once_with(EXPECTED_TEST_PATH)
-    mock_magic.from_file.assert_called_once_with(EXPECTED_TEST_PATH, mime=False)
+    _assert_handled_file_calls(mock_os, mock_magic, EXPECTED_TEST_PATH)
 
 
 def test_file_meta_from_path_is_dir(mock_os, mock_magic):
@@ -124,9 +136,7 @@ def test_file_meta_from_path_is_dir(mock_os, mock_magic):
     assert file_meta.size_raw == 0
     assert file_meta.filetype == FileType.DIR
 
-    mock_os.path.exists.assert_called_once_with(EXPECTED_TEST_PATH)
-    mock_os.path.getsize.assert_not_called()
-    mock_magic.from_file.assert_not_called()
+    _assert_unhandled_file_calls(mock_os, mock_magic, EXPECTED_TEST_PATH)
 
 
 def test_file_meta_from_path_unknown(mock_os, mock_magic):
@@ -145,9 +155,7 @@ def test_file_meta_from_path_unknown(mock_os, mock_magic):
     assert file_meta.size_raw == 0
     assert file_meta.filetype == FileType.UNKNOWN
 
-    mock_os.path.exists.assert_called_once_with(EXPECTED_TEST_PATH)
-    mock_os.path.getsize.assert_not_called()
-    mock_magic.from_file.assert_not_called()
+    _assert_unhandled_file_calls(mock_os, mock_magic, EXPECTED_TEST_PATH)
 
 
 def test_file_meta_from_path_does_not_exist(mock_os, mock_magic):
@@ -160,6 +168,4 @@ def test_file_meta_from_path_does_not_exist(mock_os, mock_magic):
     assert file_meta.path == EXPECTED_TEST_PATH
     assert file_meta.desc == 'File does not exist'
 
-    mock_os.path.exists.assert_called_once_with(EXPECTED_TEST_PATH)
-    mock_os.path.getsize.assert_not_called()
-    mock_magic.from_file.assert_not_called()
+    _assert_unhandled_file_calls(mock_os, mock_magic, EXPECTED_TEST_PATH)
