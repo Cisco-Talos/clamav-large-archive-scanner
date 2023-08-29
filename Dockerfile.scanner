@@ -1,4 +1,5 @@
-FROM ubuntu:22.04
+# FROM ubuntu:22.04
+FROM index.docker.io/library/debian:11-slim
 # Upgrade sys packages
 # Put it up here so that builds are faster
 
@@ -10,8 +11,11 @@ RUN set -eux; \
 # RUN apt-get -y install libguestfs-tools 
 
 # Guestfs Stuff - This linux image version does change over time...
-RUN apt-get install -y libguestfs-tools linux-image-5.15.0-78-generic 
-# RUN guestfish -a /dev/null run
+# ubuntu:22.04 line
+# RUN apt-get install -y libguestfs-tools linux-image-5.15.0-78-generic 
+
+# Debian:11-slim line, no generic kernel needed here for some reason?
+RUN apt-get install -y libguestfs-tools 
 
 
 RUN mkdir /workspace
