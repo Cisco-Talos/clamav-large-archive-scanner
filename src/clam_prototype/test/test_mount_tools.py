@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, ANY
+from unittest.mock import MagicMock
 
 # noinspection PyPackageRequirements
 import pytest
@@ -108,8 +108,6 @@ def test_mount_guestfs_partition(mock_subprocess, mock_os):
 
 
 def test_mount_guestfs_partition_error(mock_subprocess, mock_os):
-    from lib.mount_tools import mount_guestfs_partition
-
     _setup_mount_guestfs_partition(mock_os)
 
     # Make subprocess call fail

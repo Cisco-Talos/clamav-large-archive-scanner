@@ -14,7 +14,7 @@ class FileType(Enum):
     ZIP = (2, 'zip')
     ISO = (3, 'iso')
     VMDK = (4, 'vmdk')
-    TARGZ = (5, 'tar.gz')
+    TARGZ = (5, 'tgz')  # This cannot be tar.gz, since that would conflict with tar during detection
     QCOW2 = (6, 'qcow2')
 
     # Directories don't need unpacked, this just fits it into the same pattern

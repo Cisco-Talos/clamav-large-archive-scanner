@@ -30,4 +30,4 @@ def determine_filetype(path: str) -> FileType:
 # Find all the directories created by make_temp_dir that are associated with the given file
 def find_associated_dirs(filepath: str) -> list[str]:
     file_name = os.path.basename(filepath)
-    return glob.glob(f'/tmp/clam_unpacker_*_{file_name}_*')
+    return glob.glob(f'/tmp/{TMP_FILE_PREFIX}_*_{file_name}_*')
