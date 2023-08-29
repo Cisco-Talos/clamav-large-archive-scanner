@@ -149,34 +149,28 @@ def test_mount_iso_error(mock_subprocess):
     assert str(e.value) == EXPECTED_STDOUT + '\n' + EXPECTED_STDERR
 
 
-should_return_good_fuse_mounts = True
-should_guestfs_umount_succeed = True
+class GuestfsUmountRunSideEffect:
+    def __init__(self, return_good_fuse_mounts: bool, umount_should_succeed: bool):
+        self.return_good_fuse_mounts = return_good_fuse_mounts
+        self.umount_should_succeed = umount_should_succeed
 
+    def __call__(self, *args, **kwargs):
+        if args[0] == ['mount', '-t', 'fuse']:
+            if self.return_good_fuse_mounts:
+                return _make_subprocess_result(EXPECTED_FUSE_MOUNTS_STR, '', 0)
+            else:
+                return _make_subprocess_result(EXPECTED_STDOUT, EXPECTED_STDERR, 1)
+        elif args[0][0] == 'guestunmount':
+            if self.umount_should_succeed:
+                return _make_subprocess_result('', '', 0)
+            else:
+                return _make_subprocess_result(EXPECTED_STDOUT, EXPECTED_STDERR, 1)
 
-def _guestfs_umount_run_side_effect(*args, **kwargs):
-    global should_return_good_fuse_mounts, should_guestfs_umount_succeed
-
-    if args[0] == ['mount', '-t', 'fuse']:
-        if should_return_good_fuse_mounts:
-            return _make_subprocess_result(EXPECTED_FUSE_MOUNTS_STR, '', 0)
-        else:
-            return _make_subprocess_result(EXPECTED_STDOUT, EXPECTED_STDERR, 1)
-    elif args[0][0] == 'guestunmount':
-        if should_guestfs_umount_succeed:
-            return _make_subprocess_result('', '', 0)
-        else:
-            return _make_subprocess_result(EXPECTED_STDOUT, EXPECTED_STDERR, 1)
-
-    _make_subprocess_result(EXPECTED_STDOUT, EXPECTED_STDERR, 1)
+        return _make_subprocess_result(EXPECTED_STDOUT, EXPECTED_STDERR, 1)
 
 
 def _mock_guestfs_umount_run_actions(mock_subprocess, return_good_fuse_mounts: bool, umount_should_succeed: bool):
-    global should_return_good_fuse_mounts, should_guestfs_umount_succeed
-
-    should_return_good_fuse_mounts = return_good_fuse_mounts
-    should_guestfs_umount_succeed = umount_should_succeed
-
-    mock_subprocess.run.side_effect = _guestfs_umount_run_side_effect
+    mock_subprocess.run.side_effect = GuestfsUmountRunSideEffect(return_good_fuse_mounts, umount_should_succeed)
 
 
 def _assert_check_fuse_mounts_called(mock_subprocess):
