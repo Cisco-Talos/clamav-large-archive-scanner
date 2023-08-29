@@ -29,7 +29,9 @@ def cli(trace, trace_file):
               help=f'Minimum file size to unpack (default: {DEFAULT_MIN_SIZE_HUMAN})', type=str)
 @click.option('--ignore-size', default=False, is_flag=True,
               help='Ignore file size lower limit (equivalent to --min-size=0)')
-def unpack(path, recursive, min_size, ignore_size):
+@click.option('--tmp-dir', default='/tmp', type=click.Path(resolve_path=True),
+              help='Directory to unpack files to (default: /tmp)')
+def unpack(path, recursive, min_size, ignore_size, tmp_dir):
     file_meta = detect.file_meta_from_path(path)
 
     print(f'Got file metadata: \n{file_meta}')
@@ -55,22 +57,24 @@ def unpack(path, recursive, min_size, ignore_size):
             return
 
     if recursive:
-        unpack_dirs = unpacker.unpack_recursive(file_meta, min_file_size)
+        unpack_dirs = unpacker.unpack_recursive(file_meta, min_file_size, tmp_dir)
         print('Found and unpacked the following:')
         print('\n'.join(unpack_dirs))
     else:
-        unpack_dir = unpacker.unpack(file_meta)
+        unpack_dir = unpacker.unpack(file_meta, tmp_dir)
         print(f'Unpacked File to {unpack_dir}')
 
 
 @cli.command()
 @click.argument('path', type=click.Path(exists=True, resolve_path=True))
 @click.option('--file', 'is_file', is_flag=True, help='Recursively cleanup directories associated with the file ')
-def cleanup(path, is_file):
+@click.option('--tmp-dir', default='/tmp', type=click.Path(resolve_path=True),
+              help='Directory to search for unpacked files(default: /tmp)')
+def cleanup(path, is_file, tmp_dir):
     print(f'Attempting to clean up {path}')
 
     if is_file:
-        cleaner.cleanup_recursive(path)
+        cleaner.cleanup_recursive(path, tmp_dir)
     else:
         cleaner.cleanup_path(path)
 

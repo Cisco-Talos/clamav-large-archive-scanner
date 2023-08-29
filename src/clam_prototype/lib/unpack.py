@@ -11,17 +11,17 @@ from lib.tmp_files import make_temp_dir
 
 
 class BaseFileUnpackHandler:
-    def __init__(self, file_meta: FileMetadata):
+    def __init__(self, file_meta: FileMetadata, tmp_dir: str):
         self.file_meta = file_meta
-        self.tmp_dir = make_temp_dir(self.file_meta)
+        self.tmp_dir = make_temp_dir(self.file_meta, tmp_dir)
 
     def unpack(self) -> str:
         raise NotImplementedError()
 
 
 class ArchiveFileUnpackHandler(BaseFileUnpackHandler):
-    def __init__(self, file_meta: FileMetadata, file_format: str):
-        super().__init__(file_meta)
+    def __init__(self, file_meta: FileMetadata, file_format: str, tmp_dir: str):
+        super().__init__(file_meta, tmp_dir)
         self.format = file_format
 
     def unpack(self) -> str:
@@ -37,8 +37,8 @@ class ArchiveFileUnpackHandler(BaseFileUnpackHandler):
 
 
 class IsoFileUnpackHandler(BaseFileUnpackHandler):
-    def __init__(self, file_meta: FileMetadata):
-        super().__init__(file_meta)
+    def __init__(self, file_meta: FileMetadata, tmp_dir: str):
+        super().__init__(file_meta, tmp_dir)
 
     def unpack(self) -> str:
         try:
@@ -51,14 +51,14 @@ class IsoFileUnpackHandler(BaseFileUnpackHandler):
 
 
 class TarFileUnpackHandler(ArchiveFileUnpackHandler):
-    def __init__(self, file_meta: FileMetadata):
-        super().__init__(file_meta, 'tar')
+    def __init__(self, file_meta: FileMetadata, tmp_dir: str):
+        super().__init__(file_meta, 'tar', tmp_dir)
 
 
 # Handles VMDK and QCOW2
 class GuestFSFileUnpackHandler(BaseFileUnpackHandler):
-    def __init__(self, file_meta: FileMetadata):
-        super().__init__(file_meta)
+    def __init__(self, file_meta: FileMetadata, tmp_dir: str):
+        super().__init__(file_meta, tmp_dir)
 
     def unpack(self) -> str:
         try:
@@ -71,7 +71,8 @@ class GuestFSFileUnpackHandler(BaseFileUnpackHandler):
 
         except MountException as e:
             # TODO: Log the error from subprocess?
-            raise click.FileError(filename=self.file_meta.path, hint=f'Unable to list partitions for {self.file_meta.path}, aborting unpack')
+            raise click.FileError(filename=self.file_meta.path,
+                                  hint=f'Unable to list partitions for {self.file_meta.path}, aborting unpack')
 
         for partition in partitions:
             try:
@@ -86,13 +87,13 @@ class GuestFSFileUnpackHandler(BaseFileUnpackHandler):
 
 
 class ZipFileUnpackHandler(ArchiveFileUnpackHandler):
-    def __init__(self, file_meta: FileMetadata):
-        super().__init__(file_meta, 'zip')
+    def __init__(self, file_meta: FileMetadata, tmp_dir: str):
+        super().__init__(file_meta, 'zip', tmp_dir)
 
 
 class TarGzFileUnpackHandler(ArchiveFileUnpackHandler):
-    def __init__(self, file_meta: FileMetadata):
-        super().__init__(file_meta, 'gztar')
+    def __init__(self, file_meta: FileMetadata, tmp_dir: str):
+        super().__init__(file_meta, 'gztar', tmp_dir)
 
 
 # Directories don't need unpacked, this just fits it into the same pattern
@@ -117,37 +118,37 @@ FILETYPE_HANDLERS = {
 HANDLED_FILE_TYPES = FILETYPE_HANDLERS.keys()
 
 
-def _handler_from_file_meta(file_meta: FileMetadata) -> BaseFileUnpackHandler:
+def _handler_from_file_meta(file_meta: FileMetadata, tmp_dir: str) -> BaseFileUnpackHandler:
     handler_class = FILETYPE_HANDLERS[file_meta.filetype]
-    return handler_class(file_meta)
+    return handler_class(file_meta, tmp_dir)
 
 
 def is_handled_filetype(filetype: FileType) -> bool:
     return filetype in HANDLED_FILE_TYPES
 
 
-def _do_unpack(file: FileMetadata) -> str:
+def _do_unpack(file: FileMetadata, tmp_dir: str) -> str:
     print("Doing unpack")
     if not is_handled_filetype(file.filetype):
         raise click.BadParameter(f'Unhandled file type: {file.filetype}')
 
-    handler = _handler_from_file_meta(file)
+    handler = _handler_from_file_meta(file, tmp_dir)
     dest_dir = handler.unpack()
 
     return dest_dir
 
 
-def unpack(file: FileMetadata) -> str:
+def unpack(file: FileMetadata, tmp_dir: str) -> str:
     try:
-        return _do_unpack(file)
+        return _do_unpack(file, tmp_dir)
     except ArchiveException as e:
         raise click.FileError(hint=f'Unable to unpack {file.path}, got the following error: {e}')
 
 
-def unpack_recursive(parent_file: FileMetadata, min_file_size) -> list[str]:
+def unpack_recursive(parent_file: FileMetadata, min_file_size: int, tmp_dir: str) -> list[str]:
     unpacked_dirs = list()
 
-    parent_unpack_dir = _do_unpack(parent_file)
+    parent_unpack_dir = _do_unpack(parent_file, tmp_dir)
 
     unpacked_dirs.append(parent_unpack_dir)
 
@@ -178,7 +179,7 @@ def unpack_recursive(parent_file: FileMetadata, min_file_size) -> list[str]:
                 file_meta.root_meta = parent_file
 
                 try:
-                    unpack_dir = _do_unpack(file_meta)
+                    unpack_dir = _do_unpack(file_meta, tmp_dir)
                     unpacked_dirs.append(unpack_dir)
                     dirs_to_inspect.append(unpack_dir)
                 except ArchiveException as e:

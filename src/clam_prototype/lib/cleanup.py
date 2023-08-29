@@ -84,8 +84,8 @@ FILETYPE_HANDLERS = {
 }
 
 
-def _cleanup_file(filepath: str, only_one: bool) -> None:
-    files = tmp_files.find_associated_dirs(filepath)
+def _cleanup_file(filepath: str, only_one: bool, tmp_dir: str) -> None:
+    files = tmp_files.find_associated_dirs(filepath, tmp_dir)
     if len(files) == 0:
         print(f'No associated directories found for {filepath}')
         return
@@ -111,9 +111,9 @@ def cleanup_path(filepath: str) -> None:
     handler.cleanup()
 
 
-def cleanup_file(filepath: str) -> None:
-    _cleanup_file(filepath, only_one=True)
+def cleanup_file(filepath: str, tmp_dir: str) -> None:
+    _cleanup_file(filepath, only_one=True, tmp_dir=tmp_dir)
 
 
-def cleanup_recursive(filepath: str) -> None:
-    _cleanup_file(filepath, only_one=False)
+def cleanup_recursive(filepath: str, tmp_dir: str) -> None:
+    _cleanup_file(filepath, only_one=False, tmp_dir=tmp_dir)

@@ -7,13 +7,14 @@ from pytest_mock import MockerFixture
 from lib.file_data import FileMetadata, FileType
 
 EXPECTED_TMP_FILE_PREFIX = 'clam_unpacker'
+EXPECTED_TMP_DIR = '/tmp2_just_to_be_different'
 
 EXPECTED_FILE_TYPE = FileType.TAR
 EXPECTED_ARCHIVE_NAME = f'some_test_file.{EXPECTED_FILE_TYPE.get_filetype_short()}'
-EXPECTED_ARCHIVE_PATH = f'/tmp/{EXPECTED_ARCHIVE_NAME}'
+EXPECTED_ARCHIVE_PATH = f'{EXPECTED_TMP_DIR}/{EXPECTED_ARCHIVE_NAME}'
 EXPECTED_PARENT_FILE_TYPE = FileType.ISO
 EXPECTED_PARENT_NAME = f'some_parent_name.{EXPECTED_PARENT_FILE_TYPE.get_filetype_short()}'
-EXPECTED_PARENT_PATH = f'/tmp/{EXPECTED_PARENT_NAME}'
+EXPECTED_PARENT_PATH = f'{EXPECTED_TMP_DIR}/{EXPECTED_PARENT_NAME}'
 
 EXPECTED_MKDTEMP_PREFIX_NO_PARENT = f'{EXPECTED_TMP_FILE_PREFIX}_{EXPECTED_FILE_TYPE.get_filetype_short()}_{EXPECTED_ARCHIVE_NAME}_'
 EXPECTED_MKDTEMP_PREFIX_WITH_PARENT = f'{EXPECTED_TMP_FILE_PREFIX}_{EXPECTED_FILE_TYPE.get_filetype_short()}-p_{EXPECTED_PARENT_NAME}_p-{EXPECTED_ARCHIVE_NAME}_'
@@ -63,9 +64,9 @@ def test_make_temp_dir_no_parent(mock_tempfile):
 
     file_meta = _make_file_meta(False)
 
-    assert make_temp_dir(file_meta) == EXPECTED_MKDTEMP_RV
+    assert make_temp_dir(file_meta, EXPECTED_TMP_DIR) == EXPECTED_MKDTEMP_RV
 
-    mock_tempfile.mkdtemp.assert_called_once_with(prefix=EXPECTED_MKDTEMP_PREFIX_NO_PARENT, dir='/tmp')
+    mock_tempfile.mkdtemp.assert_called_once_with(prefix=EXPECTED_MKDTEMP_PREFIX_NO_PARENT, dir=EXPECTED_TMP_DIR)
 
 
 def test_make_tmp_dir_with_parent(mock_tempfile):
@@ -75,9 +76,9 @@ def test_make_tmp_dir_with_parent(mock_tempfile):
 
     file_meta = _make_file_meta(True)
 
-    assert make_temp_dir(file_meta) == EXPECTED_MKDTEMP_RV
+    assert make_temp_dir(file_meta, EXPECTED_TMP_DIR) == EXPECTED_MKDTEMP_RV
 
-    mock_tempfile.mkdtemp.assert_called_once_with(prefix=EXPECTED_MKDTEMP_PREFIX_WITH_PARENT, dir='/tmp')
+    mock_tempfile.mkdtemp.assert_called_once_with(prefix=EXPECTED_MKDTEMP_PREFIX_WITH_PARENT, dir=EXPECTED_TMP_DIR)
 
 
 HANDLED_FILE_TYPES = [FileType.TAR, FileType.TARGZ, FileType.ZIP, FileType.ISO, FileType.VMDK, FileType.QCOW2]
@@ -99,6 +100,6 @@ def test_find_associated_dirs(mock_glob):
     expected_glob_return = [EXPECTED_ARCHIVE_PATH]
 
     mock_glob.glob.return_value = expected_glob_return
-    assert find_associated_dirs(EXPECTED_ARCHIVE_PATH) == expected_glob_return
+    assert find_associated_dirs(EXPECTED_ARCHIVE_PATH, EXPECTED_TMP_DIR) == expected_glob_return
 
-    mock_glob.glob.assert_called_once_with(f'/tmp/{EXPECTED_TMP_FILE_PREFIX}_*_{EXPECTED_ARCHIVE_NAME}_*')
+    mock_glob.glob.assert_called_once_with(f'{EXPECTED_TMP_DIR}/{EXPECTED_TMP_FILE_PREFIX}_*_{EXPECTED_ARCHIVE_NAME}_*')
