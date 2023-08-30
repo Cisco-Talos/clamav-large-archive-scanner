@@ -7,7 +7,7 @@ from lib.exceptions import MountException
 from lib.fast_log import fast_log
 
 
-def enumerate_guesfs_partitions(file_path: str) -> list[str]:
+def enumerate_guestfs_partitions(file_path: str) -> list[str]:
     result = subprocess.run(['virt-filesystems', '-a', file_path], capture_output=True, text=True)
     if result.returncode != 0:
         combined_output = str(result.stdout) + '\n' + str(result.stderr)

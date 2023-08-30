@@ -50,8 +50,8 @@ def _make_subprocess_result(stdout: str, stderr: str, returncode: int):
 
 
 def _call_enumerate_guestfs_parts():
-    from lib.mount_tools import enumerate_guesfs_partitions
-    return enumerate_guesfs_partitions(EXPECTED_ARCHIVE_PATH)
+    from lib.mount_tools import enumerate_guestfs_partitions
+    return enumerate_guestfs_partitions(EXPECTED_ARCHIVE_PATH)
 
 
 def test_enumerate_guestfs_parts(mock_subprocess):
