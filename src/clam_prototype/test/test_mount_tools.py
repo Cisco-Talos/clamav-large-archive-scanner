@@ -103,7 +103,8 @@ def test_mount_guestfs_partition(mock_subprocess, mock_os):
     _assert_mount_guestfs_common_calls(mock_os)
 
     mock_subprocess.run.assert_called_once_with(
-        ['guestmount', '-a', EXPECTED_ARCHIVE_PATH, '-m', GUESTFS_PARTITIONS[0], '--ro', EXPECTED_MOUNT_POINT],
+        ['guestmount', '-o', 'allow_other', '-a', EXPECTED_ARCHIVE_PATH, '-m', GUESTFS_PARTITIONS[0], '--ro',
+         EXPECTED_MOUNT_POINT],
         capture_output=True)
 
 

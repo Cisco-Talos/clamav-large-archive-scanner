@@ -36,7 +36,7 @@ def mount_guestfs_partition(archive_path: str, partition: str, parent_tmp_dir: s
 
     # Actually use guestmount to mount it
     # guestmount -a /workspace/boot.vmdk -m /dev/sda1  --ro /workspace/t
-    result = subprocess.run(['guestmount', '-a', archive_path, '-m', partition, '--ro', partition_tmp_dir],
+    result = subprocess.run(['guestmount', '-o', 'allow_other', '-a', archive_path, '-m', partition, '--ro', partition_tmp_dir],
                             capture_output=True)
     if result.returncode != 0:
         # Could not mount, should remove directory

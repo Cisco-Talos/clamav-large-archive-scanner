@@ -11,3 +11,14 @@ services:
       - /home/yanbzhu/clamAV/:/workspace
     privileged: true
     network_mode: "host"
+
+  scanner_plus_clam:
+    image: cisco.com/clamav/clam-plus-scanner
+    build:
+      context: .
+      dockerfile: Dockerfile.scanner.in.clam
+    volumes:
+      - /home/yanbzhu/clamAV/:/workspace
+      - /home/yanbzhu/clamAV/clam_src/var_lib_clamav:/var/lib/clamav
+    privileged: true
+    network_mode: "host"

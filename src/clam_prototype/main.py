@@ -4,11 +4,18 @@ import humanize
 import lib.cleanup as cleaner
 import lib.file_data as detect
 import lib.unpack as unpacker
+import lib.scanner as scanner
+
 from lib import fast_log
 from lib.filesize import convert_human_to_machine_bytes
 
 DEFAULT_MIN_SIZE_THRESHOLD_BYTES = 2 * 1024 * 1024 * 1024  # 2GB
 DEFAULT_MIN_SIZE_HUMAN = humanize.naturalsize(DEFAULT_MIN_SIZE_THRESHOLD_BYTES, binary=True)
+
+
+# You'll notice that several functions here are duplicated with _ in front of them
+# This is to make UT easier, as trying to test some of the filesystem interactions is a bit tricky
+# Best to just assume that all the click checks are passing, and only test our logic
 
 
 @click.group()
@@ -19,6 +26,58 @@ DEFAULT_MIN_SIZE_HUMAN = humanize.naturalsize(DEFAULT_MIN_SIZE_THRESHOLD_BYTES, 
 def cli(trace, trace_file):
     if trace:
         fast_log.log_start(trace_file)
+
+
+# Since this is used multiple times, logic is held here
+def _do_unpack_logic(path: str, recursive: bool, min_size: str, ignore_size: bool, tmp_dir: str) -> list[str]:
+    """
+    :param path: Path to unpack
+    :param recursive: Whether to recursively unpack
+    :param min_size: Minimum file size to unpack
+    :param tmp_dir: Temporary directory to unpack to
+    :return: A list of unpacked directories
+    """
+
+    file_meta = detect.file_meta_from_path(path)
+
+    print(f'Got file metadata: \n{file_meta}')
+
+    if ignore_size:
+        min_file_size = 0
+    else:
+        try:
+            min_file_size = convert_human_to_machine_bytes(min_size)
+        except ValueError as e:
+            raise click.BadParameter(f'Unable to parse min-size: {e}')
+
+    # In the special case where a directory is specified, we're just going to do recursive unpack on the dir
+    if file_meta.filetype == detect.FileType.DIR:
+        recursive = True
+
+    else:
+        # Check if filesize is < min-size for non directories
+        # If so, do not try to unpack it, unless --ignore-size is passed
+        if file_meta.size_raw < min_file_size:
+            print(
+                f'File size is below the threshold of {DEFAULT_MIN_SIZE_HUMAN}, not unpacking. See help for options')
+            return []
+
+    unpack_dirs = []
+
+    if recursive:
+        unpack_dirs = unpacker.unpack_recursive(file_meta, min_file_size, tmp_dir)
+        print('Found and unpacked the following:')
+        print('\n'.join(unpack_dirs))
+    else:
+        unpack_dir = unpacker.unpack(file_meta, tmp_dir)
+        print(f'Unpacked File to {unpack_dir}')
+        unpack_dirs.append(unpack_dir)
+
+    return unpack_dirs
+
+
+def _unpack(path: str, recursive: bool, min_size: str, ignore_size: bool, tmp_dir: str):
+    _do_unpack_logic(path, recursive, min_size,  ignore_size, tmp_dir)
 
 
 @cli.command()
@@ -32,45 +91,10 @@ def cli(trace, trace_file):
 @click.option('--tmp-dir', default='/tmp', type=click.Path(resolve_path=True),
               help='Directory to unpack files to (default: /tmp)')
 def unpack(path, recursive, min_size, ignore_size, tmp_dir):
-    file_meta = detect.file_meta_from_path(path)
-
-    print(f'Got file metadata: \n{file_meta}')
-
-    try:
-        min_file_size = convert_human_to_machine_bytes(min_size)
-    except ValueError as e:
-        raise click.BadParameter(f'Unable to parse min-size: {e}')
-
-    if ignore_size:
-        min_file_size = 0
-
-    # In the special case where a directory is specified, we're just going to do recursive unpack on the dir
-    if file_meta.filetype == detect.FileType.DIR:
-        recursive = True
-
-    else:
-        # Check if filesize is < min-size for non directories
-        # If so, do not try to unpack it, unless --ignore-size is passed
-        if file_meta.size_raw < min_file_size:
-            print(
-                f'File size is below the threshold of {DEFAULT_MIN_SIZE_HUMAN}, not unpacking. See help for options')
-            return
-
-    if recursive:
-        unpack_dirs = unpacker.unpack_recursive(file_meta, min_file_size, tmp_dir)
-        print('Found and unpacked the following:')
-        print('\n'.join(unpack_dirs))
-    else:
-        unpack_dir = unpacker.unpack(file_meta, tmp_dir)
-        print(f'Unpacked File to {unpack_dir}')
+    _unpack(path, recursive, min_size, ignore_size, tmp_dir)
 
 
-@cli.command()
-@click.argument('path', type=click.Path(exists=True, resolve_path=True))
-@click.option('--file', 'is_file', is_flag=True, help='Recursively cleanup directories associated with the file ')
-@click.option('--tmp-dir', default='/tmp', type=click.Path(resolve_path=True),
-              help='Directory to search for unpacked files(default: /tmp)')
-def cleanup(path, is_file, tmp_dir):
+def _cleanup(path, is_file, tmp_dir):
     print(f'Attempting to clean up {path}')
 
     if is_file:
@@ -79,6 +103,46 @@ def cleanup(path, is_file, tmp_dir):
         cleaner.cleanup_path(path)
 
     print(f'Cleaned up  {path}')
+
+
+@cli.command()
+@click.argument('path', type=click.Path(exists=True, resolve_path=True))
+@click.option('--file', 'is_file', is_flag=True, help='Recursively cleanup directories associated with the file ')
+@click.option('--tmp-dir', default='/tmp', type=click.Path(resolve_path=True),
+              help='Directory to search for unpacked files(default: /tmp)')
+def cleanup(path, is_file, tmp_dir):
+    _cleanup(path, is_file, tmp_dir)
+
+
+def _deepscan(path, min_size, ignore_size, fail_fast, tmp_dir):
+    if not scanner.validate_clamdscan():
+        raise click.ClickException(f'Unable to find clamdscan, please install it and try again')
+
+    # recursively unpack the file
+    unpacked_dirs = _do_unpack_logic(path, True, min_size, ignore_size, tmp_dir)
+
+    # scan the unpacked dirs
+    files_clean = scanner.clamdscan(unpacked_dirs, fail_fast)
+
+    # Cleanup
+    cleaner.cleanup_recursive(path, tmp_dir)
+
+    if not files_clean:
+        raise click.ClickException(f'Found virus in {path}')
+
+
+@cli.command()
+@click.argument('path', type=click.Path(exists=True, resolve_path=True))
+@click.option('--min-size', default=DEFAULT_MIN_SIZE_THRESHOLD_BYTES,
+              help=f'Minimum file size to unpack (default: {DEFAULT_MIN_SIZE_HUMAN})', type=str)
+@click.option('--ignore-size', default=False, is_flag=True,
+              help='Ignore file size lower limit (equivalent to --min-size=0)')
+@click.option('--tmp-dir', default='/tmp', type=click.Path(resolve_path=True),
+              help='Temporary working directory (default: /tmp)')
+@click.option('-ff', '--fail-fast', default=False, is_flag=True,
+              help='Stop scanning after the first failure')
+def deepscan(path, min_size, ignore_size, fail_fast, tmp_dir):
+    _deepscan(path, min_size, ignore_size, fail_fast, tmp_dir)
 
 
 if __name__ == "__main__":

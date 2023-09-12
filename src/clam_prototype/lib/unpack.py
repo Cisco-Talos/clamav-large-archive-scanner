@@ -102,8 +102,9 @@ class GuestFSFileUnpackHandler(BaseFileUnpackHandler):
 
 # Directories don't need unpacked, this just fits it into the same pattern
 class DirFileUnpackHandler:
-    def __init__(self, file_meta: file_data.FileMetadata):
+    def __init__(self, file_meta: file_data.FileMetadata, tmp_dir=''):
         self.file_meta = file_meta
+        # tmp_dir is ignored, this is just to match the BaseFileUnpackHandler
 
     def unpack(self) -> str:
         return self.file_meta.path

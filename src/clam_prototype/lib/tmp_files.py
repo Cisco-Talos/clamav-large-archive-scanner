@@ -15,6 +15,9 @@ def make_temp_dir(file_meta: FileMetadata, tmp_dir: str) -> str:
         prefix = f'{TMP_FILE_PREFIX}_{file_meta.filetype.get_filetype_short()}-p_{file_meta.root_meta.get_filename()}_p-{file_meta.get_filename()}_'
     tmp_dir = tempfile.mkdtemp(prefix=prefix, dir=tmp_dir)
 
+    # Need to make it readable by everyone, otherwise clam will throw a fit
+    os.chmod(tmp_dir, 0o755)
+
     return tmp_dir
 
 

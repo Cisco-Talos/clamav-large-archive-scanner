@@ -1,3 +1,4 @@
+import os
 from unittest.mock import MagicMock
 
 # noinspection PyPackageRequirements
@@ -31,13 +32,21 @@ def mock_glob():
 def mock_tempfile():
     return MagicMock()
 
+@pytest.fixture(scope='function')
+def mock_os():
+    return MagicMock()
+
 
 @pytest.fixture(scope='function', autouse=True)
-def setup_and_teardown(mocker: MockerFixture, mock_glob, mock_tempfile):
+def setup_and_teardown(mocker: MockerFixture, mock_glob, mock_tempfile, mock_os):
     # Before logic
     # These are re-mocked for every single test
     mocker.patch('lib.tmp_files.glob', mock_glob)
     mocker.patch('lib.tmp_files.tempfile', mock_tempfile)
+    mocker.patch('lib.tmp_files.os', mock_os)
+
+    # Make os.path the real one
+    mock_os.path = os.path
 
     yield
     # After logic
@@ -57,7 +66,7 @@ def _make_file_meta(include_parent: bool) -> FileMetadata:
     return file_meta
 
 
-def test_make_temp_dir_no_parent(mock_tempfile):
+def test_make_temp_dir_no_parent(mock_tempfile, mock_os):
     from lib.tmp_files import make_temp_dir
 
     mock_tempfile.mkdtemp.return_value = EXPECTED_MKDTEMP_RV
@@ -67,9 +76,10 @@ def test_make_temp_dir_no_parent(mock_tempfile):
     assert make_temp_dir(file_meta, EXPECTED_TMP_DIR) == EXPECTED_MKDTEMP_RV
 
     mock_tempfile.mkdtemp.assert_called_once_with(prefix=EXPECTED_MKDTEMP_PREFIX_NO_PARENT, dir=EXPECTED_TMP_DIR)
+    mock_os.chmod.assert_called_once_with(EXPECTED_MKDTEMP_RV, 0o755)
 
 
-def test_make_tmp_dir_with_parent(mock_tempfile):
+def test_make_tmp_dir_with_parent(mock_tempfile, mock_os):
     from lib.tmp_files import make_temp_dir
 
     mock_tempfile.mkdtemp.return_value = EXPECTED_MKDTEMP_RV
@@ -79,6 +89,7 @@ def test_make_tmp_dir_with_parent(mock_tempfile):
     assert make_temp_dir(file_meta, EXPECTED_TMP_DIR) == EXPECTED_MKDTEMP_RV
 
     mock_tempfile.mkdtemp.assert_called_once_with(prefix=EXPECTED_MKDTEMP_PREFIX_WITH_PARENT, dir=EXPECTED_TMP_DIR)
+    mock_os.chmod.assert_called_once_with(EXPECTED_MKDTEMP_RV, 0o755)
 
 
 HANDLED_FILE_TYPES = [FileType.TAR, FileType.TARGZ, FileType.ZIP, FileType.ISO, FileType.VMDK, FileType.QCOW2]
