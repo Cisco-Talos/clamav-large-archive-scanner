@@ -3,8 +3,9 @@ import shutil
 
 import click
 
+from lib import fast_log
 from lib.exceptions import ArchiveException, MountException
-from lib.fast_log import fast_log
+from lib.fast_log import trace
 
 # These imports are here to make mocking easier in UT
 # Yes, it does make the code a bit more verbose, but it's worth it
@@ -80,8 +81,8 @@ class GuestFSFileUnpackHandler(BaseFileUnpackHandler):
             partitions = mount_tools.enumerate_guestfs_partitions(
                 self.file_meta.path)  # internal partitions inside the blob
 
-            print(f'Found the following partitions:')
-            print('\n'.join(partitions))
+            fast_log.debug(f'Found the following partitions:')
+            fast_log.debug('\n'.join(partitions))
 
         except MountException as e:
             # TODO: Log the error from subprocess?
@@ -90,12 +91,12 @@ class GuestFSFileUnpackHandler(BaseFileUnpackHandler):
 
         for partition in partitions:
             try:
-                print(f'attempting to mount {partition}')
+                fast_log.debug(f'attempting to mount {partition}')
                 mount_tools.mount_guestfs_partition(self.file_meta.path, partition, self.tmp_dir)
-                print(f'Mounted {partition} to {self.tmp_dir}')
+                fast_log.debug(f'Mounted {partition} to {self.tmp_dir}')
             except MountException as e:
                 # TODO: Log the error from subprocess?
-                print(f'Unable to mount the {partition} for {self.file_meta.path}, attempting to continue anyway')
+                fast_log.warn(f'Unable to mount the {partition} for {self.file_meta.path}, attempting to continue anyway')
 
         return self.tmp_dir
 
@@ -133,7 +134,7 @@ def is_handled_filetype(filetype: file_data.FileType) -> bool:
 
 
 def _do_unpack(file: file_data.FileMetadata, tmp_dir: str) -> str:
-    print("Doing unpack")
+    fast_log.debug("Doing unpack")
     if not is_handled_filetype(file.filetype):
         raise click.BadParameter(f'Unhandled file type: {file.filetype}')
 
@@ -164,23 +165,23 @@ def unpack_recursive(parent_file: file_data.FileMetadata, min_file_size: int, tm
     # Go until all archives are unpacked and inspected
     while len(dirs_to_inspect) > 0:
         current_dir = dirs_to_inspect.pop()
-        print(f'Analyzing {current_dir} for additional archives')
+        fast_log.debug(f'Analyzing {current_dir} for additional archives')
         for root, _, files in os.walk(current_dir):
-            fast_log(f'Looking at {root}')
+            trace(f'Looking at {root}')
             for file in files:
                 file_path = os.path.join(root, file)
-                fast_log(f'Looking at at {file_path}')
+                trace(f'Looking at at {file_path}')
                 file_meta = file_data.file_meta_from_path(file_path)
 
-                fast_log(f'Got meta from at {file_path}, type is {file_meta.filetype}')
+                trace(f'Got meta from at {file_path}, type is {file_meta.filetype}')
 
                 if not is_handled_filetype(file_meta.filetype) or file_meta.size_raw < min_file_size:
-                    fast_log('File too small or not handled, moving on')
+                    trace('File too small or not handled, moving on')
                     continue
 
                 # Current is a valid unpackable archive
-                print(f'Found archive:')
-                print(file_meta)
+                fast_log.debug(f'Found archive:')
+                fast_log.debug(str(file_meta))
                 file_meta.root_meta = parent_file
 
                 try:
@@ -188,6 +189,6 @@ def unpack_recursive(parent_file: file_data.FileMetadata, min_file_size: int, tm
                     unpacked_dirs.append(unpack_dir)
                     dirs_to_inspect.append(unpack_dir)
                 except ArchiveException as e:
-                    print(f'Unable to unpack {file_path}, got the following error: {e}. Continuing anyway')
+                    fast_log.warn(f'Unable to unpack {file_path}, got the following error: {e}. Continuing anyway')
 
     return unpacked_dirs

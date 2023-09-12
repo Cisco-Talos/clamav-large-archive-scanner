@@ -4,7 +4,7 @@ import os
 import subprocess
 
 from lib.exceptions import MountException
-from lib.fast_log import fast_log
+from lib.fast_log import trace
 
 
 def enumerate_guestfs_partitions(file_path: str) -> list[str]:
@@ -20,7 +20,7 @@ def enumerate_guestfs_partitions(file_path: str) -> list[str]:
 def _check_fuse_mounts() -> list[str]:
     result = subprocess.run(['mount', '-t', 'fuse'], capture_output=True, text=True)
     if result.returncode != 0:
-        fast_log(f'Unable to enumerate fuse mounts: {result.stderr}')
+        trace(f'Unable to enumerate fuse mounts: {result.stderr}')
         return []
 
     mounts = [x for x in result.stdout.split('\n') if x != '']
@@ -59,7 +59,7 @@ def umount_guestfs_partition(directory: str) -> None:
     fuse_mounts = _check_fuse_mounts()
 
     if not any(directory in m for m in fuse_mounts):
-        fast_log(f'Partition {directory} is not mounted, skipping umount')
+        trace(f'Partition {directory} is not mounted, skipping umount')
         return
 
     # guestunmount local_dir

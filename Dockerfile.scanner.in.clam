@@ -1,34 +1,20 @@
-# FROM ubuntu:22.04
-# FROM index.docker.io/library/debian:11-slim
+# This gets built locally for now until it's published by talos
 FROM clamav-debian:latest
+
 # Upgrade sys packages
 # Put it up here so that builds are faster
-
 RUN set -eux; \
-    apt-get update; \
-    apt-get upgrade -y; 
-
-# RUN apt-get -y install libguestfs-tools 7zip
-# RUN apt-get -y install libguestfs-tools 
-
-# Guestfs Stuff - This linux image version does change over time...
-# ubuntu:22.04 line
-# RUN apt-get install -y libguestfs-tools linux-image-5.15.0-78-generic 
-
-# Debian:11-slim line, no generic kernel needed here for some reason?
-RUN apt-get install -y libguestfs-tools 
+    apt-get update; \ 
+    apt-get upgrade -y; \
+    apt-get install -y libguestfs-tools libmagic1 python3-pip
 
 
 RUN mkdir /workspace
 WORKDIR /workspace
 
-# Extractor tool stuff
-RUN apt-get install -y libmagic1 python3-pip
-
 # Temp measure
 COPY requirements.txt /workspace
 RUN pip3 install -r requirements.txt
-
 
 RUN mkdir -p /scanner
 
@@ -36,6 +22,5 @@ RUN mkdir -p /scanner
 COPY src/clam_prototype/lib /scanner/lib
 COPY src/clam_prototype/main.py /scanner
 
-# TODO: Remove APT Cache
-# RUN rm -rf /var/lib/apt/lists/*
+RUN rm -rf /var/lib/apt/lists/*
 

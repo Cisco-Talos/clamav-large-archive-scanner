@@ -5,10 +5,15 @@ from unittest.mock import MagicMock
 import pytest
 from pytest_mock import MockerFixture
 
+import common
 from lib.file_data import FileType
 
 EXPECTED_TEST_PATH = '/tmp/some_test_path'
 
+
+@pytest.fixture(scope='session', autouse=True)
+def init_logging():
+    common.init_logging()
 
 @pytest.fixture(scope='function')
 def mock_os():

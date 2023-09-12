@@ -1,3 +1,9 @@
 From this top level dir:
 
 python -m pytest .
+
+If you want to see test output
+python -m pytest -s .
+
+If you want it at the end
+python -m pytest -rP .

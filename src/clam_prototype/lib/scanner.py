@@ -3,6 +3,8 @@
 
 import subprocess
 
+from lib import fast_log
+
 
 def validate_clamdscan() -> bool:
     """
@@ -42,20 +44,20 @@ def clamdscan(paths: list[str], fail_fast: bool) -> bool:
     paths_clean = True
 
     for a_path in paths:
-        print(f'Scanning {a_path}')
+        fast_log.info(f'Scanning {a_path}')
         is_clean, clamdscan_output = _run_clamdscan(a_path)
         if not is_clean:
             paths_clean = False
-            print('!' * 80)
-            print(f'Viruses found by clamdscan in file {a_path}:')
-            print(clamdscan_output)
-            print('!' * 80)
+            fast_log.error('!' * 80)
+            fast_log.error(f'Viruses found by clamdscan in file {a_path}:')
+            fast_log.error(clamdscan_output)
+            fast_log.error('!' * 80)
             if fail_fast:
                 return False
 
-    # TODO, maybe clean up how this is displayed and where to print?
-    print('=' * 80)
-    print('No viruses found by clamdscan, all clear!')
-    print('=' * 80)
+    if paths_clean:
+        fast_log.info('=' * 80)
+        fast_log.info('No viruses found by clamdscan, all clear!')
+        fast_log.info('=' * 80)
 
     return paths_clean

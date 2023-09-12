@@ -6,6 +6,7 @@ import click
 import pytest
 from pytest_mock import MockerFixture
 
+import common
 from lib.exceptions import ArchiveException, MountException
 from lib.file_data import FileMetadata, FileType
 
@@ -21,6 +22,11 @@ EXPECTED_GUESTFS_PARTITIONS = ['/dev/sda1', '/dev/sda2', '/dev/sda3']
 
 EXPECTED_HANDLED_FILE_TYPES = [FileType.TAR, FileType.ISO, FileType.VMDK, FileType.ZIP, FileType.TARGZ, FileType.QCOW2,
                                FileType.DIR]
+
+
+@pytest.fixture(scope='session', autouse=True)
+def init_logging():
+    common.init_logging()
 
 
 # Mock Fixtures

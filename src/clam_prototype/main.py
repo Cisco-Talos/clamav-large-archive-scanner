@@ -23,9 +23,11 @@ DEFAULT_MIN_SIZE_HUMAN = humanize.naturalsize(DEFAULT_MIN_SIZE_THRESHOLD_BYTES, 
               help=f'Enable trace logging. By default, log all actions to {fast_log.LOG_FILE}')
 @click.option('--trace-file', default=None, type=click.Path(resolve_path=True),
               help=f'Override the default trace log file')
-def cli(trace, trace_file):
-    if trace:
-        fast_log.log_start(trace_file)
+@click.option('-v', '--verbose', is_flag=True, default=False, help='Enable verbose logging')
+@click.option('-q', '--quiet', is_flag=True, default=False, help='Disable all logging')
+def cli(trace, trace_file, verbose, quiet):
+    if not quiet:
+        fast_log.log_start(verbose, trace, trace_file)
 
 
 # Since this is used multiple times, logic is held here
@@ -40,7 +42,7 @@ def _do_unpack_logic(path: str, recursive: bool, min_size: str, ignore_size: boo
 
     file_meta = detect.file_meta_from_path(path)
 
-    print(f'Got file metadata: \n{file_meta}')
+    fast_log.debug(f'Got file metadata: \n{file_meta}')
 
     if ignore_size:
         min_file_size = 0
@@ -58,7 +60,7 @@ def _do_unpack_logic(path: str, recursive: bool, min_size: str, ignore_size: boo
         # Check if filesize is < min-size for non directories
         # If so, do not try to unpack it, unless --ignore-size is passed
         if file_meta.size_raw < min_file_size:
-            print(
+            fast_log.warn(
                 f'File size is below the threshold of {DEFAULT_MIN_SIZE_HUMAN}, not unpacking. See help for options')
             return []
 
@@ -66,18 +68,18 @@ def _do_unpack_logic(path: str, recursive: bool, min_size: str, ignore_size: boo
 
     if recursive:
         unpack_dirs = unpacker.unpack_recursive(file_meta, min_file_size, tmp_dir)
-        print('Found and unpacked the following:')
-        print('\n'.join(unpack_dirs))
+        fast_log.info('Found and unpacked the following:')
+        fast_log.info('\n'.join(unpack_dirs))
     else:
         unpack_dir = unpacker.unpack(file_meta, tmp_dir)
-        print(f'Unpacked File to {unpack_dir}')
+        fast_log.info(f'Unpacked File to {unpack_dir}')
         unpack_dirs.append(unpack_dir)
 
     return unpack_dirs
 
 
 def _unpack(path: str, recursive: bool, min_size: str, ignore_size: bool, tmp_dir: str):
-    _do_unpack_logic(path, recursive, min_size,  ignore_size, tmp_dir)
+    _do_unpack_logic(path, recursive, min_size, ignore_size, tmp_dir)
 
 
 @cli.command()
@@ -95,14 +97,14 @@ def unpack(path, recursive, min_size, ignore_size, tmp_dir):
 
 
 def _cleanup(path, is_file, tmp_dir):
-    print(f'Attempting to clean up {path}')
+    fast_log.info(f'Attempting to clean up {path}')
 
     if is_file:
         cleaner.cleanup_recursive(path, tmp_dir)
     else:
         cleaner.cleanup_path(path)
 
-    print(f'Cleaned up  {path}')
+    fast_log.info(f'Cleaned up  {path}')
 
 
 @cli.command()

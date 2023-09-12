@@ -4,6 +4,7 @@ import click
 
 import lib.mount_tools as mount_tools
 import lib.tmp_files as tmp_files
+from lib import fast_log
 from lib.exceptions import MountException
 from lib.file_data import FileType
 
@@ -13,7 +14,7 @@ class BaseCleanupHandler:
         self.path = path
 
     def cleanup(self) -> None:
-        print(f'Cleaning up {self.path} by deleting it.')
+        fast_log.debug(f'Cleaning up {self.path} by deleting it.')
         shutil.rmtree(path=self.path, ignore_errors=True)
 
 
@@ -32,7 +33,7 @@ class IsoCleanupHandler(BaseCleanupHandler):
         super().__init__(path)
 
     def cleanup(self) -> None:
-        print(f'Cleaning up {self.path} by un-mounting it.')
+        fast_log.debug(f'Cleaning up {self.path} by un-mounting it.')
         try:
             mount_tools.umount_iso(self.path)
         except MountException as e:
@@ -47,7 +48,7 @@ class GuestFSCleanupHandler(BaseCleanupHandler):
         super().__init__(path)
 
     def cleanup(self) -> None:
-        print(f'Cleaning up {self.path} by un-mounting it all underlying partitions')
+        fast_log.debug(f'Cleaning up {self.path} by un-mounting it all underlying partitions')
 
         # Find all mount-points in the directory
         dirs = mount_tools.list_top_level_dirs(self.path)
@@ -55,18 +56,18 @@ class GuestFSCleanupHandler(BaseCleanupHandler):
 
         for a_dir in dirs:
             try:
-                print(f'Un-mounting {a_dir}')
+                fast_log.debug(f'Un-mounting {a_dir}')
                 mount_tools.umount_guestfs_partition(a_dir)
             except MountException as e:
-                print(f'Unable to unmount {a_dir}, continuing anyway')
-                print(f'Got the following mount error: {e}')
+                fast_log.warn(f'Unable to unmount {a_dir}, continuing anyway')
+                fast_log.warn(f'Got the following mount error: {e}')
                 all_success = False
                 continue
 
         if all_success:
             shutil.rmtree(path=self.path, ignore_errors=True)
         else:
-            print('Unable to un-mount all partitions')
+            fast_log.warn('Unable to un-mount all partitions')
 
 
 class TarGzCleanupHandler(BaseCleanupHandler):
@@ -87,15 +88,15 @@ FILETYPE_HANDLERS = {
 def _cleanup_file(filepath: str, only_one: bool, tmp_dir: str) -> None:
     files = tmp_files.find_associated_dirs(filepath, tmp_dir)
     if len(files) == 0:
-        print(f'No associated directories found for {filepath}')
+        fast_log.debug(f'No associated directories found for {filepath}')
         return
 
     if only_one:
-        print(f'Found an associated directory for {filepath}')
+        fast_log.debug(f'Found an associated directory for {filepath}')
         cleanup_path(files[0])
     else:
-        print(f'Found {len(files)} associated directories for {filepath}')
-        print(files)
+        fast_log.debug(f'Found {len(files)} associated directories for {filepath}')
+        fast_log.debug(files)
         for file in files:
             cleanup_path(file)
 

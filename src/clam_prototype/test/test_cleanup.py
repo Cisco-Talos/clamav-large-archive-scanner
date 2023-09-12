@@ -6,6 +6,7 @@ import click
 import pytest
 from pytest_mock import MockerFixture
 
+import common
 import lib.cleanup
 import lib.mount_tools
 import lib.exceptions
@@ -15,6 +16,11 @@ from lib.file_data import FileType
 
 EXPECTED_ARCHIVE_PARENT_DIR = '/tmp/some_archive_parent_dir'
 EXPECTED_ARCHIVE_PATH = f'{EXPECTED_ARCHIVE_PARENT_DIR}/some_archive_path.some_archive_format'
+
+
+@pytest.fixture(scope='session', autouse=True)
+def init_logging():
+    common.init_logging()
 
 
 # Mock Fixtures

@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 from pytest_mock import MockerFixture
 
+import common
 from lib.file_data import FileMetadata, FileType
 
 EXPECTED_TMP_FILE_PREFIX = 'clam_unpacker'
@@ -23,6 +24,11 @@ EXPECTED_MKDTEMP_PREFIX_WITH_PARENT = f'{EXPECTED_TMP_FILE_PREFIX}_{EXPECTED_FIL
 EXPECTED_MKDTEMP_RV = '/tmp/some_temp_dir'  # Doesn't have to be real or match the prefix since mocks
 
 
+@pytest.fixture(scope='session', autouse=True)
+def init_logging():
+    common.init_logging()
+
+
 @pytest.fixture(scope='function')
 def mock_glob():
     return MagicMock()
@@ -31,6 +37,7 @@ def mock_glob():
 @pytest.fixture(scope='function')
 def mock_tempfile():
     return MagicMock()
+
 
 @pytest.fixture(scope='function')
 def mock_os():

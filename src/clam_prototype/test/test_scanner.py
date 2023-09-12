@@ -4,6 +4,12 @@ from unittest.mock import MagicMock
 import pytest
 from pytest_mock import MockerFixture
 
+import common
+
+
+@pytest.fixture(scope='session', autouse=True)
+def init_logging():
+    common.init_logging()
 
 @pytest.fixture(scope='function')
 def mock_subprocess():

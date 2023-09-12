@@ -6,6 +6,7 @@ import click
 import pytest
 from pytest_mock import MockerFixture
 
+import common
 from lib.file_data import FileMetadata, FileType
 
 EXPECTED_PATH = '/some/path/some_archive.tar'
@@ -14,6 +15,11 @@ EXPECTED_MIN_SIZE_BYTES = 100 * 1024 * 1024
 EXPECTED_TMP_DIR = '/tmp'
 EXPECTED_UNPACKED_DIRS = ['/tmp/some_dir_1', '/tmp/some_dir_2', '/tmp/some_dir_3']
 EXPECTED_UNPACKED_DIR = '/tmp/some_dir_4'
+
+
+@pytest.fixture(scope='session', autouse=True)
+def init_logging():
+    common.init_logging()
 
 
 @pytest.fixture(scope='function')
@@ -141,4 +147,3 @@ def test_unpack_non_recursive(mock_unpacker, mock_detect, testcase_file_meta):
 
     _assert_unpack_logic(mock_detect, mock_unpacker, EXPECTED_PATH, False, EXPECTED_MIN_SIZE_BYTES, EXPECTED_TMP_DIR,
                          testcase_file_meta)
-
