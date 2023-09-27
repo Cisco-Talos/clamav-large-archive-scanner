@@ -25,7 +25,6 @@ def _run_clamdscan(path: str) -> (bool, str):
     :return: True if no virus is found, False otherwise
     """
 
-    # --fdpass here is needed since by default, the unpacker runs as root
     result = subprocess.run(['clamdscan', '-m', '--stdout', path], capture_output=True, text=True)
 
     if result.returncode != 0:
