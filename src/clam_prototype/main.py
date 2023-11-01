@@ -116,15 +116,19 @@ def cleanup(path, is_file, tmp_dir):
     _cleanup(path, is_file, tmp_dir)
 
 
-def _deepscan(path, min_size, ignore_size, fail_fast, tmp_dir):
+def _deepscan(path, min_size, ignore_size, fail_fast, all_match, tmp_dir):
     if not scanner.validate_clamdscan():
         raise click.ClickException(f'Unable to find clamdscan, please install it and try again')
+
+    # all-match and ff cannot be both active
+    if all_match and fail_fast:
+        raise click.ClickException(f'Cannot specify both --allmatch and --fail-fast')
 
     # recursively unpack the file
     unpacked_dirs = _do_unpack_logic(path, True, min_size, ignore_size, tmp_dir)
 
     # scan the unpacked dirs
-    files_clean = scanner.clamdscan(unpacked_dirs, fail_fast)
+    files_clean = scanner.clamdscan(unpacked_dirs, fail_fast, all_match)
 
     # Cleanup
     cleaner.cleanup_recursive(path, tmp_dir)
@@ -143,8 +147,10 @@ def _deepscan(path, min_size, ignore_size, fail_fast, tmp_dir):
               help='Temporary working directory (default: /tmp)')
 @click.option('-ff', '--fail-fast', default=False, is_flag=True,
               help='Stop scanning after the first failure')
-def deepscan(path, min_size, ignore_size, fail_fast, tmp_dir):
-    _deepscan(path, min_size, ignore_size, fail_fast, tmp_dir)
+@click.option('--allmatch', default=False, is_flag=True,
+              help='Stop scanning after the first failure')
+def deepscan(path, min_size, ignore_size, fail_fast, allmatch, tmp_dir):
+    _deepscan(path, min_size, ignore_size, fail_fast, allmatch, tmp_dir)
 
 
 if __name__ == "__main__":

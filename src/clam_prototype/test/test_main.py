@@ -1,6 +1,4 @@
-import subprocess
 from unittest.mock import MagicMock
-from click.testing import CliRunner
 
 import click
 import pytest
@@ -98,12 +96,25 @@ def _assert_unpack_logic(mock_detect, mock_unpacker, expected_path, expected_rec
         mock_unpacker.unpack.assert_called_once_with(expected_file_meta, expected_tmp_dir)
 
 
+def _assert_no_unpack(mock_detect: MagicMock, mock_unpacker: MagicMock):
+    mock_detect.assert_not_called()
+    mock_unpacker.assert_not_called()
+
+
+def _assert_no_scan(mock_scanner: MagicMock):
+    mock_scanner.assert_not_called()
+
+
+def _assert_no_cleanup(mock_cleaner: MagicMock):
+    mock_cleaner.assert_not_called()
+
+
 def test_deepscan_no_clamdscan(mock_scanner):
     from main import _deepscan
     _set_clamdscan_present(mock_scanner, False)
 
     with pytest.raises(click.ClickException) as e:
-        _deepscan(EXPECTED_PATH, EXPECTED_MIN_SIZE, False, False, EXPECTED_TMP_DIR)
+        _deepscan(EXPECTED_PATH, EXPECTED_MIN_SIZE, False, False, False, EXPECTED_TMP_DIR)
 
     mock_scanner.validate_clamdscan.assert_called_once_with()
 
@@ -114,12 +125,27 @@ def test_deepscan_happy_path(mock_scanner, mock_cleaner, mock_unpacker, mock_det
     _set_default_unpack_mocks(mock_unpacker, mock_detect, testcase_file_meta)
     _set_clamdscan_clean(mock_scanner, True)
 
-    _deepscan(EXPECTED_PATH, EXPECTED_MIN_SIZE, False, False, EXPECTED_TMP_DIR)
+    _deepscan(EXPECTED_PATH, EXPECTED_MIN_SIZE, False, False, False, EXPECTED_TMP_DIR)
 
     _assert_unpack_logic(mock_detect, mock_unpacker, EXPECTED_PATH, True, EXPECTED_MIN_SIZE_BYTES, EXPECTED_TMP_DIR,
                          testcase_file_meta)
 
-    mock_scanner.clamdscan.assert_called_once_with(EXPECTED_UNPACKED_DIRS, False)
+    mock_scanner.clamdscan.assert_called_once_with(EXPECTED_UNPACKED_DIRS, False, False)
+    mock_cleaner.cleanup_recursive.assert_called_once_with(EXPECTED_PATH, EXPECTED_TMP_DIR)
+
+
+def test_deepscan_happy_path_all_match(mock_scanner, mock_cleaner, mock_unpacker, mock_detect, testcase_file_meta):
+    from main import _deepscan
+    _set_clamdscan_present(mock_scanner, True)
+    _set_default_unpack_mocks(mock_unpacker, mock_detect, testcase_file_meta)
+    _set_clamdscan_clean(mock_scanner, True)
+
+    _deepscan(EXPECTED_PATH, EXPECTED_MIN_SIZE, False, False, True, EXPECTED_TMP_DIR)
+
+    _assert_unpack_logic(mock_detect, mock_unpacker, EXPECTED_PATH, True, EXPECTED_MIN_SIZE_BYTES, EXPECTED_TMP_DIR,
+                         testcase_file_meta)
+
+    mock_scanner.clamdscan.assert_called_once_with(EXPECTED_UNPACKED_DIRS, False, True)
     mock_cleaner.cleanup_recursive.assert_called_once_with(EXPECTED_PATH, EXPECTED_TMP_DIR)
 
 
@@ -130,13 +156,27 @@ def test_deepscan_virus_fail_fast(mock_scanner, mock_cleaner, mock_unpacker, moc
     _set_clamdscan_clean(mock_scanner, False)
 
     with pytest.raises(click.ClickException) as e:
-        _deepscan(EXPECTED_PATH, EXPECTED_MIN_SIZE, False, True, EXPECTED_TMP_DIR)
+        _deepscan(EXPECTED_PATH, EXPECTED_MIN_SIZE, False, True, False, EXPECTED_TMP_DIR)
 
     _assert_unpack_logic(mock_detect, mock_unpacker, EXPECTED_PATH, True, EXPECTED_MIN_SIZE_BYTES, EXPECTED_TMP_DIR,
                          testcase_file_meta)
 
-    mock_scanner.clamdscan.assert_called_once_with(EXPECTED_UNPACKED_DIRS, True)
+    mock_scanner.clamdscan.assert_called_once_with(EXPECTED_UNPACKED_DIRS, True, False)
     mock_cleaner.cleanup_recursive.assert_called_once_with(EXPECTED_PATH, EXPECTED_TMP_DIR)
+
+
+def test_deepscan_error_all_match_and_ff(mock_scanner, mock_cleaner, mock_unpacker, mock_detect, testcase_file_meta):
+    from main import _deepscan
+    _set_clamdscan_present(mock_scanner, True)
+
+    with pytest.raises(click.ClickException) as e:
+        _deepscan(EXPECTED_PATH, EXPECTED_MIN_SIZE, False, True, True, EXPECTED_TMP_DIR)
+
+    assert e.value.message == 'Cannot specify both --allmatch and --fail-fast'
+
+    _assert_no_unpack(mock_detect, mock_unpacker)
+    _assert_no_scan(mock_scanner)
+    _assert_no_cleanup(mock_cleaner)
 
 
 def test_unpack_non_recursive(mock_unpacker, mock_detect, testcase_file_meta):
