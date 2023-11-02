@@ -177,6 +177,10 @@ def unpack_recursive(parent_file: file_data.FileMetadata, min_file_size: int, tm
 
                 if not is_handled_filetype(file_meta.filetype) or file_meta.size_raw < min_file_size:
                     trace('File too small or not handled, moving on')
+                    # During recursive unpacking, we need to warn the user if we found a file that was not handled
+                    # But meets the filesize requirement
+                    if file_meta.size_raw >= min_file_size:
+                        fast_log.warn(f'Ignoring unhandled large file: {file_path}')
                     continue
 
                 # Current is a valid unpackable archive
