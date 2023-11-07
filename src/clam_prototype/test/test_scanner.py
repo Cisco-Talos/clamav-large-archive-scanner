@@ -6,6 +6,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 import common
+from lib.contexts import UnpackContext
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -46,11 +47,11 @@ def _assert_which_clamdscan_called(mock_subprocess):
                                                 stderr=subprocess.DEVNULL)
 
 
-def _assert_run_clamdscan_called(mock_subprocess, path: str, all_match: bool):
+def _assert_run_clamdscan_called(mock_subprocess, u_ctx: UnpackContext, all_match: bool):
     expected_args = ['clamdscan', '-m', '--stdout']
     if all_match:
         expected_args.append('--allmatch')
-    expected_args.append(path)
+    expected_args.append(u_ctx.unpacked_dir_location)
 
     mock_subprocess.run.assert_any_call(expected_args, capture_output=True, text=True)
 
@@ -71,41 +72,45 @@ def test_validate_clamd_not_present(mock_subprocess):
     _assert_which_clamdscan_called(mock_subprocess)
 
 
-EXPECTED_PATHS = ['some_path1', 'some_path2', 'some_path3']
+EXPECTED_CTXS = [
+    common.make_basic_unpack_ctx('some_unpack_path_1', 'some_file_path_1'),
+    common.make_basic_unpack_ctx('some_unpack_path_2', 'some_file_path_2'),
+    common.make_basic_unpack_ctx('some_unpack_path_3', 'some_file_path_3'),
+]
 
 
 def test_clamdscan_clean(mock_subprocess):
     from lib.scanner import clamdscan
     mock_subprocess.run.return_value = _make_subprocess_result('', '', 0)
 
-    assert clamdscan(EXPECTED_PATHS, False, False)
+    assert clamdscan(EXPECTED_CTXS, False, False)
 
-    for path in EXPECTED_PATHS:
-        _assert_run_clamdscan_called(mock_subprocess, path, False)
+    for ctx in EXPECTED_CTXS:
+        _assert_run_clamdscan_called(mock_subprocess, ctx, False)
 
 
 def test_clamdscan_clean_all_match(mock_subprocess):
     from lib.scanner import clamdscan
     mock_subprocess.run.return_value = _make_subprocess_result('', '', 0)
 
-    assert clamdscan(EXPECTED_PATHS, False, True)
+    assert clamdscan(EXPECTED_CTXS, False, True)
 
-    for path in EXPECTED_PATHS:
-        _assert_run_clamdscan_called(mock_subprocess, path, True)
+    for ctx in EXPECTED_CTXS:
+        _assert_run_clamdscan_called(mock_subprocess, ctx, True)
 
 
 def test_clamdscan_virus_found(mock_subprocess):
     from lib.scanner import clamdscan
     mock_subprocess.run.return_value = _make_subprocess_result('', '', 1)
 
-    assert not clamdscan(EXPECTED_PATHS, False, False)
+    assert not clamdscan(EXPECTED_CTXS, False, False)
 
-    for path in EXPECTED_PATHS:
-        _assert_run_clamdscan_called(mock_subprocess, path, False)
+    for ctx in EXPECTED_CTXS:
+        _assert_run_clamdscan_called(mock_subprocess, ctx, False)
 
 
 def _fail_second_path_side_effect(*args, **kwargs):
-    if args[0][-1] == EXPECTED_PATHS[1]:
+    if args[0][-1] == EXPECTED_CTXS[1].unpacked_dir_location:
         return _make_subprocess_result('', '', 1)
     else:
         return _make_subprocess_result('', '', 0)
@@ -115,8 +120,8 @@ def test_clamdsan_virus_found_fail_fast(mock_subprocess):
     from lib.scanner import clamdscan
     mock_subprocess.run.side_effect = _fail_second_path_side_effect
 
-    assert not clamdscan(EXPECTED_PATHS, True, False)
+    assert not clamdscan(EXPECTED_CTXS, True, False)
 
-    _assert_run_clamdscan_called(mock_subprocess, EXPECTED_PATHS[0], False)
-    _assert_run_clamdscan_called(mock_subprocess, EXPECTED_PATHS[1], False)
+    _assert_run_clamdscan_called(mock_subprocess, EXPECTED_CTXS[0], False)
+    _assert_run_clamdscan_called(mock_subprocess, EXPECTED_CTXS[1], False)
     assert mock_subprocess.run.call_count == 2

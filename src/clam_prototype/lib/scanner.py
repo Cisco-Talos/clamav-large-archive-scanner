@@ -4,6 +4,7 @@
 import subprocess
 
 from lib import fast_log
+from lib.contexts import UnpackContext
 
 
 def validate_clamdscan() -> bool:
@@ -40,9 +41,9 @@ def _run_clamdscan(path: str, all_match: bool) -> (bool, str):
     return True, ""
 
 
-def clamdscan(paths: list[str], fail_fast: bool, all_match: bool) -> bool:
+def clamdscan(u_ctxs: list[UnpackContext], fail_fast: bool, all_match: bool) -> bool:
     """
-    :param paths: A list of paths to scan
+    :param u_ctxs: A list of UnpackContexts, containing the paths to scan
     :param fail_fast: If true, will stop scanning after the first failure in the list of paths.
     :param all_match: If true, will pass in --allmatch to clam, which will return all viruses found
     :return: True if no virus is found, False otherwise
@@ -50,14 +51,14 @@ def clamdscan(paths: list[str], fail_fast: bool, all_match: bool) -> bool:
 
     paths_clean = True
 
-    for a_path in paths:
-        fast_log.info(f'Scanning {a_path}')
-        is_clean, clamdscan_output = _run_clamdscan(a_path, all_match)
+    for a_ctx in u_ctxs:
+        fast_log.info(f'Scanning {a_ctx.nice_filename()}')
+        is_clean, clamdscan_output = _run_clamdscan(a_ctx.unpacked_dir_location, all_match)
         if not is_clean:
             paths_clean = False
             fast_log.error('!' * 80)
-            fast_log.error(f'Viruses found by clamdscan in file {a_path}:')
-            fast_log.error(clamdscan_output)
+            fast_log.error(f'Viruses found by clamdscan in file {a_ctx.nice_filename()}:')
+            fast_log.error(a_ctx.detmp_filepath(clamdscan_output))
             fast_log.error('!' * 80)
             if fail_fast:
                 return False

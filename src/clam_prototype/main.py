@@ -5,6 +5,7 @@ import lib.cleanup as cleaner
 import lib.file_data as detect
 import lib.unpack as unpacker
 import lib.scanner as scanner
+import lib.contexts as Contexts
 
 from lib import fast_log
 from lib.filesize import convert_human_to_machine_bytes
@@ -31,7 +32,7 @@ def cli(trace, trace_file, verbose, quiet):
 
 
 # Since this is used multiple times, logic is held here
-def _do_unpack_logic(path: str, recursive: bool, min_size: str, ignore_size: bool, tmp_dir: str) -> list[str]:
+def _unpack(path: str, recursive: bool, min_size: str, ignore_size: bool, tmp_dir: str) -> list[Contexts.UnpackContext]:
     """
     :param path: Path to unpack
     :param recursive: Whether to recursively unpack
@@ -64,22 +65,18 @@ def _do_unpack_logic(path: str, recursive: bool, min_size: str, ignore_size: boo
                 f'File size is below the threshold of {DEFAULT_MIN_SIZE_HUMAN}, not unpacking. See help for options')
             return []
 
-    unpack_dirs = []
+    unpack_ctxs = []
 
     if recursive:
-        unpack_dirs = unpacker.unpack_recursive(file_meta, min_file_size, tmp_dir)
+        unpack_ctxs = unpacker.unpack_recursive(file_meta, min_file_size, tmp_dir)
         fast_log.info('Found and unpacked the following:')
-        fast_log.info('\n'.join(unpack_dirs))
+        fast_log.info('\n'.join([str(u_ctx) for u_ctx in unpack_ctxs]))
     else:
-        unpack_dir = unpacker.unpack(file_meta, tmp_dir)
-        fast_log.info(f'Unpacked File to {unpack_dir}')
-        unpack_dirs.append(unpack_dir)
+        u_ctx = unpacker.unpack(file_meta, tmp_dir)
+        fast_log.info(f'Unpacked {u_ctx}')
+        unpack_ctxs.append(u_ctx)
 
-    return unpack_dirs
-
-
-def _unpack(path: str, recursive: bool, min_size: str, ignore_size: bool, tmp_dir: str):
-    _do_unpack_logic(path, recursive, min_size, ignore_size, tmp_dir)
+    return unpack_ctxs
 
 
 @cli.command()
@@ -125,10 +122,10 @@ def _deepscan(path, min_size, ignore_size, fail_fast, all_match, tmp_dir):
         raise click.ClickException(f'Cannot specify both --allmatch and --fail-fast')
 
     # recursively unpack the file
-    unpacked_dirs = _do_unpack_logic(path, True, min_size, ignore_size, tmp_dir)
+    unpacked_ctxs = _unpack(path, True, min_size, ignore_size, tmp_dir)
 
     # scan the unpacked dirs
-    files_clean = scanner.clamdscan(unpacked_dirs, fail_fast, all_match)
+    files_clean = scanner.clamdscan(unpacked_ctxs, fail_fast, all_match)
 
     # Cleanup
     cleaner.cleanup_recursive(path, tmp_dir)
