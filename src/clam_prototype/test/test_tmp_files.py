@@ -1,3 +1,21 @@
+#  Copyright (C) 2023 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
+#
+#  Authors: Dave Zhu (yanbzhu@cisco.com)
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License version 2 as
+#  published by the Free Software Foundation.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+#  MA 02110-1301, USA.
+
 import os
 from unittest.mock import MagicMock
 
@@ -103,13 +121,13 @@ HANDLED_FILE_TYPES = [FileType.TAR, FileType.TARGZ, FileType.ZIP, FileType.ISO, 
 
 
 def test_detect_filetype():
-    from lib.tmp_files import determine_filetype
+    from lib.tmp_files import determine_tmp_dir_filetype
 
     for filetype in HANDLED_FILE_TYPES:
-        assert determine_filetype(f'/tmp/{EXPECTED_TMP_FILE_PREFIX}_{filetype.get_filetype_short()}') == filetype
+        assert determine_tmp_dir_filetype(f'/tmp/{EXPECTED_TMP_FILE_PREFIX}_{filetype.get_filetype_short()}') == filetype
 
     # Test that it returns UNKNOWN for a file that doesn't belong to us
-    assert determine_filetype(f'/tmp/someone_elses_file.tar') == FileType.UNKNOWN
+    assert determine_tmp_dir_filetype(f'/tmp/someone_elses_file.tar') == FileType.UNKNOWN
 
 
 def test_find_associated_dirs(mock_glob):

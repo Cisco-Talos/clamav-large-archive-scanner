@@ -1,4 +1,21 @@
-import json
+#  Copyright (C) 2023 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
+#
+#  Authors: Dave Zhu (yanbzhu@cisco.com)
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License version 2 as
+#  published by the Free Software Foundation.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+#  MA 02110-1301, USA.
+
 import os
 import stat
 from enum import Enum
@@ -101,15 +118,3 @@ def file_meta_from_path(path: str) -> 'FileMetadata':
         rv.desc = DNE_DESC
 
     return rv
-
-# Likely not needed?
-# def file_meta_from_json(json_str: str) -> 'FileMetadata':
-#     json_obj = json.loads(json_str)
-#     rv = FileMetadata()
-#
-#     rv.path = json_obj['path']
-#     rv.desc = json_obj['desc']
-#     rv.size_raw = json_obj['size']
-#     rv.filetype = json_obj['filetype']
-#
-#     return rv
