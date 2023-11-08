@@ -62,4 +62,3 @@ def convert_human_to_machine_bytes(human_bytes: str):
         return Decimal(size) * FILESIZE_UNITS[unit]
     except InvalidOperation:
         raise ValueError(f'{size} is not a valid number')
-

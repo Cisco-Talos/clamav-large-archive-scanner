@@ -22,8 +22,8 @@ from fastlogging import LogInit, Logger, INFO, DEBUG
 
 LOG_FILE = '/tmp/clam_unpacker.log'
 
-_trace_logger = None  # type: Logger
-_console_logger = None  # type: Logger
+_trace_logger = None  # type: Logger | None
+_console_logger = None  # type: Logger | None
 _log_level = INFO
 
 

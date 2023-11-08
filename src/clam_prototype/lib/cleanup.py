@@ -114,8 +114,8 @@ def _cleanup_file(filepath: str, only_one: bool, tmp_dir: str) -> None:
         cleanup_path(files[0])
     else:
         fast_log.debug(f'Found {len(files)} associated directories for {filepath}')
-        fast_log.debug(files)
         for file in files:
+            fast_log.debug(f'Cleaning up {file}')
             cleanup_path(file)
 
 

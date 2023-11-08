@@ -67,7 +67,7 @@ class IsoFileUnpackHandler(BaseFileUnpackHandler):
         try:
             mount_tools.mount_iso(self.u_ctx.file_meta.path, self.u_ctx.unpacked_dir_location)
         except MountException as e:
-            # TODO: Log the error from subprocess?
+            fast_log.debug(f'Got MountException {e} when trying to mount {self.u_ctx.file_meta.path} to {self.u_ctx.unpacked_dir_location}')
             raise click.FileError(filename=self.u_ctx.file_meta.path, hint=f'Unable to mount {self.u_ctx.file_meta.path} to {self.u_ctx.unpacked_dir_location}')
 
         return self.u_ctx
