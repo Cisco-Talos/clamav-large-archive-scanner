@@ -1,5 +1,5 @@
-# This gets built locally for now until it's published by talos
-FROM clamav-debian:latest
+# Use the public clamav docker image for debian
+FROM clamav/clamav-debian:1.2
 
 # Upgrade sys packages
 # Put it up here so that builds are faster

@@ -1,24 +1,15 @@
 # version: "3"
 
 services:
-
-  scanner:
-    image: cisco.com/clamav/scanner
-    build:
-      context: .
-      dockerfile: Dockerfile.scanner
-    volumes:
-      - /home/yanbzhu/clamAV/:/workspace
-    privileged: true
-    network_mode: "host"
-
   scanner_plus_clam:
     image: cisco.com/clamav/clam-plus-scanner
     build:
       context: .
       dockerfile: Dockerfile.scanner.in.clam
     volumes:
+      # This mount bring the scanner code into the container at runtime
       - /home/yanbzhu/clamAV/:/workspace
+      # This mount bring the clamAV database into the container at runtime
       - /home/yanbzhu/clamAV/clam_src/var_lib_clamav:/var/lib/clamav
     privileged: true
     network_mode: "host"
