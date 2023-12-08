@@ -19,8 +19,8 @@ RUN pip3 install -r requirements.txt
 RUN mkdir -p /scanner
 
 # Copy the scanner code
-COPY src/clam_prototype/lib /scanner/lib
-COPY src/clam_prototype/main.py /scanner
+COPY src/clamav-large-archive-scanner/lib /scanner/lib
+COPY src/clamav-large-archive-scanner/main.py /scanner
 
 RUN rm -rf /var/lib/apt/lists/*
 

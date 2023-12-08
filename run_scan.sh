@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python3 src/clam_prototype/main.py $@
+python3 src/clamav-large-archive-scanner/main.py $@
