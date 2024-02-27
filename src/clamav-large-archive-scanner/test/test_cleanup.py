@@ -187,7 +187,7 @@ def test_cleanup_path(mock_tmp_files, mock_shutil):
     # For test output formatting... don't remove
     print()
 
-    mock_tmp_files.determine_filetype.return_value = FileType.TAR
+    mock_tmp_files.determine_tmp_dir_filetype.return_value = FileType.TAR
 
     lib.cleanup.cleanup_path(EXPECTED_ARCHIVE_PATH)
 
@@ -198,7 +198,7 @@ def test_cleanup_path_unknown_type(mock_tmp_files, mock_shutil):
     # For test output formatting... don't remove
     print()
 
-    mock_tmp_files.determine_filetype.return_value = FileType.UNKNOWN
+    mock_tmp_files.determine_tmp_dir_filetype.return_value = FileType.UNKNOWN
 
     with pytest.raises(click.BadParameter) as e:
         lib.cleanup.cleanup_path(EXPECTED_ARCHIVE_PATH)
@@ -212,7 +212,7 @@ def test_cleanup_single_file(mock_tmp_files, mock_shutil):
     # For test output formatting... don't remove
     print()
 
-    mock_tmp_files.determine_filetype.return_value = FileType.TAR
+    mock_tmp_files.determine_tmp_dir_filetype.return_value = FileType.TAR
     mock_tmp_files.find_associated_dirs.return_value = ASSOCIATED_DIRS
 
     lib.cleanup.cleanup_file(EXPECTED_ARCHIVE_PATH, EXPECTED_ARCHIVE_PARENT_DIR)
@@ -225,7 +225,7 @@ def test_cleanup_recursive(mock_tmp_files, mock_shutil):
     # For test output formatting... don't remove
     print()
 
-    mock_tmp_files.determine_filetype.return_value = FileType.TAR
+    mock_tmp_files.determine_tmp_dir_filetype.return_value = FileType.TAR
     mock_tmp_files.find_associated_dirs.return_value = ASSOCIATED_DIRS
 
     lib.cleanup.cleanup_recursive(EXPECTED_ARCHIVE_PATH, EXPECTED_ARCHIVE_PARENT_DIR)
