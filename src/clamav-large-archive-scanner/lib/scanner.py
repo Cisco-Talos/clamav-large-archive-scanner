@@ -73,10 +73,10 @@ def clamdscan(u_ctxs: list[UnpackContext], fail_fast: bool, all_match: bool) -> 
         is_clean, clamdscan_output = _run_clamdscan(a_ctx.unpacked_dir_location, all_match)
         if not is_clean:
             paths_clean = False
-            fast_log.error('!' * 80)
-            fast_log.error(f'Viruses found by clamdscan in file {a_ctx.nice_filename()}:')
-            fast_log.error(a_ctx.detmp_filepath(clamdscan_output))
-            fast_log.error('!' * 80)
+            fast_log.warn('!' * 80)
+            fast_log.warn(f'Viruses found by clamdscan in file {a_ctx.nice_filename()}:')
+            fast_log.warn(a_ctx.detmp_filepath(clamdscan_output))
+            fast_log.warn('!' * 80)
             if fail_fast:
                 return False
 
