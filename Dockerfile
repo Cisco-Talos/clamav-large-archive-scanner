@@ -34,7 +34,16 @@ RUN set -eux && \
     apt-get upgrade -y && \
     # Install dependencies and Python 3 + the Python Pip package manager
     apt-get install -y libguestfs-tools libmagic1 python3-pip && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    sed \
+        -e "s|^\#\(MaxFileSize\) .*|\1 0|" \
+        -e "s|^\#\(MaxScanSize\) .*|\1 0|" \
+        -e "s|^\#\(MaxScanTime\) .*|\1 3600000|" \
+        -e "s|^\#\(MaxFiles\) .*|\1 100000|" \
+        -e "s|^\#\(MaxRecursion\) .*|\1 20|" \
+        -e "s|^\#\(AlertExceedsMax\) .*|\1 yes|" \
+      "/etc/clamav/clamd.conf" > "/etc/clamav/clamd.conf.tmp" && \
+    mv "/etc/clamav/clamd.conf.tmp" "/etc/clamav/clamd.conf"
 
 WORKDIR /src
 COPY . /src/

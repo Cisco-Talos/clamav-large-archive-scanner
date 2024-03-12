@@ -51,7 +51,42 @@ To use the ClamAV Large Archive Scanner in your local environment, you will need
 
 You will need to start the `clamd` service before you can use the ClamAV Large Archive Scanner. This may require some initial configuration to include using `freshclam` to download the latest malware detection signatures. See [the ClamAV documentation](https://docs.clamav.net/manual/Usage.html) for more information on how to set up ClamAV.
 
-After you've installed everything and started `clamd`, you may run a scan with the ClamAV Large Archive Scanner. For example:
+Regarding `clamd.conf` config options, you must set the `LocalSocket` option (or `TCPSocket` option), at a minimum. On some systems, this is preconfigured. For the ClamAV Large Archive Scanner project, the goal is to scan extremely large archives, so you'll also need to add the following settings to max out ClamAV's file size capabilities:
+```
+MaxFileSize 0
+MaxScanSize 0
+MaxScanTime 3600000
+MaxFiles 100000
+MaxRecursion 20
+```
+
+Finally, you may also wish to raise an alert if the limits have been exceeded. You can do so by adding this option:
+```
+AlertExceedsMax yes
+```
+
+> _Note_: Regarding the selected config options...
+>
+> - `MaxFileSize 0` - This maxes out the file size limit for ClamAV.
+>
+> - `MaxScanSize 0` - This maxes out the scan size limit. The scan size is the total amount of bytes scanned per file when extracting files from archives, decompressing embedded files, normalizing scripts, or even re-scanning the same data as a different type. The total number of bytes scanned is often much larger than the original file size, even for plain text files.
+>
+> - `MaxScanTime 3600000` - This increases the scan time limit per file scanned to 1 hour (60 x 60 x 1000 milliseconds). Scanning large archives will take a long time. You may wish to increase or disable this limit.
+>
+> - `MaxFiles 100000` - This increases the limit for the number of embedded files scanned. You may wish to increase or disable this limit.
+>
+> - `MaxRecursion 20` - This increases the maximum recursion depth from 17 to 20. Scan recursion is the process of unpacking and scanning embedded files. Files unpacked by the Large Archive Scanner before passing to ClamAV for scanning do not count towards the maximum recursion depth. The maximum recursion depth cannot be disabled.
+>
+> - `AlertExceedsMax yes` - This option will cause scans to alert when a scan limit was exceeded, with the signature names like:
+>   - `Heuristics.Limits.Exceeded.MaxFileSize`
+>   - `Heuristics.Limits.Exceeded.MaxScanSize`
+>   - `Heuristics.Limits.Exceeded.MaxFiles`
+>   - `Heuristics.Limits.Exceeded.MaxRecursion`
+>   - `Heuristics.Limits.Exceeded.MaxScanTime`
+>
+> See the [`clamd.conf.sample` config](https://github.com/Cisco-Talos/clamav/blob/main/etc/clamd.conf.sample) for more details.
+
+After you've installed everything and have started `clamd`, you may run a scan with the ClamAV Large Archive Scanner. For example:
 ```sh
 archive scan /path/to/archive
 ```
@@ -71,7 +106,7 @@ To learn more, run `archive --help`, or keep skip to [Usage](#usage).
 
 The simplest way to use the ClamAV Large Archive Scanner is using a Docker container.
 
-The provided `Dockerfile` may be used to build an container with the environment and tools necessary to run this utility.
+The provided `Dockerfile` may be used to build an container with the environment and tools necessary to run this utility. This Dockerfile also increases the ClamAV scan limits described in the previous section.
 
 This Docker container is based on the ClamAV project's `clamav-debian` image. You can find additional instructions for how to customize and use this container [here](https://github.com/Cisco-Talos/clamav-docker/blob/main/clamav/README-debian.md).
 
