@@ -1,6 +1,0 @@
-click~=8.1.7
-python-magic~=0.4.27
-humanize~=4.9.0
-cython~=3.0.6
-fastlogging~=1.0.0
-colorama~=0.4.6

@@ -1,20 +1,30 @@
-#  Copyright (C) 2023 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
+# Copyright (C) 2023-2024 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
 #
-#  Authors: Dave Zhu (yanbzhu@cisco.com)
+# Authors: Dave Zhu (yanbzhu@cisco.com)
 #
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License version 2 as
-#  published by the Free Software Foundation.
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 #
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of mosquitto nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
 #
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
-#  MA 02110-1301, USA.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 
 import subprocess
 from unittest.mock import MagicMock
@@ -24,7 +34,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 import common
-from lib.contexts import UnpackContext
+from clamav_large_archive_scanner.lib.contexts import UnpackContext
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -41,7 +51,7 @@ def mock_subprocess():
 def setup_and_teardown(mocker: MockerFixture, mock_subprocess):
     # Before logic
     # These are re-mocked for every single test
-    mocker.patch('lib.scanner.subprocess', mock_subprocess)
+    mocker.patch('clamav_large_archive_scanner.lib.scanner.subprocess', mock_subprocess)
 
     # Make devnull correct
     mock_subprocess.DEVNULL = subprocess.DEVNULL
@@ -75,7 +85,7 @@ def _assert_run_clamdscan_called(mock_subprocess, u_ctx: UnpackContext, all_matc
 
 
 def test_validate_clamd_present(mock_subprocess):
-    from lib.scanner import validate_clamdscan
+    from clamav_large_archive_scanner.lib.scanner import validate_clamdscan
     mock_subprocess.run.return_value = _make_subprocess_result('', '', 0)
 
     assert validate_clamdscan()
@@ -83,7 +93,7 @@ def test_validate_clamd_present(mock_subprocess):
 
 
 def test_validate_clamd_not_present(mock_subprocess):
-    from lib.scanner import validate_clamdscan
+    from clamav_large_archive_scanner.lib.scanner import validate_clamdscan
     mock_subprocess.run.return_value = _make_subprocess_result('', '', 1)
 
     assert not validate_clamdscan()
@@ -98,7 +108,7 @@ EXPECTED_CTXS = [
 
 
 def test_clamdscan_clean(mock_subprocess):
-    from lib.scanner import clamdscan
+    from clamav_large_archive_scanner.lib.scanner import clamdscan
     mock_subprocess.run.return_value = _make_subprocess_result('', '', 0)
 
     assert clamdscan(EXPECTED_CTXS, False, False)
@@ -108,7 +118,7 @@ def test_clamdscan_clean(mock_subprocess):
 
 
 def test_clamdscan_clean_all_match(mock_subprocess):
-    from lib.scanner import clamdscan
+    from clamav_large_archive_scanner.lib.scanner import clamdscan
     mock_subprocess.run.return_value = _make_subprocess_result('', '', 0)
 
     assert clamdscan(EXPECTED_CTXS, False, True)
@@ -118,7 +128,7 @@ def test_clamdscan_clean_all_match(mock_subprocess):
 
 
 def test_clamdscan_virus_found(mock_subprocess):
-    from lib.scanner import clamdscan
+    from clamav_large_archive_scanner.lib.scanner import clamdscan
     mock_subprocess.run.return_value = _make_subprocess_result('', '', 1)
 
     assert not clamdscan(EXPECTED_CTXS, False, False)
@@ -135,7 +145,7 @@ def _fail_second_path_side_effect(*args, **kwargs):
 
 
 def test_clamdsan_virus_found_fail_fast(mock_subprocess):
-    from lib.scanner import clamdscan
+    from clamav_large_archive_scanner.lib.scanner import clamdscan
     mock_subprocess.run.side_effect = _fail_second_path_side_effect
 
     assert not clamdscan(EXPECTED_CTXS, True, False)

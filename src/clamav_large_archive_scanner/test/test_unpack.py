@@ -1,20 +1,30 @@
-#  Copyright (C) 2023 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
+# Copyright (C) 2023-2024 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
 #
-#  Authors: Dave Zhu (yanbzhu@cisco.com)
+# Authors: Dave Zhu (yanbzhu@cisco.com)
 #
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License version 2 as
-#  published by the Free Software Foundation.
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 #
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of mosquitto nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
 #
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
-#  MA 02110-1301, USA.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 
 import os
 from unittest.mock import MagicMock, call
@@ -25,8 +35,9 @@ import pytest
 from pytest_mock import MockerFixture
 
 import common
-from lib.exceptions import ArchiveException, MountException
-from lib.file_data import FileMetadata, FileType
+
+from clamav_large_archive_scanner.lib.exceptions import ArchiveException, MountException
+from clamav_large_archive_scanner.lib.file_data import FileMetadata, FileType
 
 EXPECTED_TMP_DIR_PARENT = '/tmp/some_tmp_dir_for_files_parent'
 EXPECTED_TMP_DIR = f'{EXPECTED_TMP_DIR_PARENT}/some_tmp_dir_for_files'
@@ -76,11 +87,11 @@ def mock_os():
 def setup_and_teardown(mocker: MockerFixture, mock_mount_tools, mock_os, mock_file_data, mock_shutil, mock_contexts):
     # Before logic
     # These are re-mocked for every single test
-    mocker.patch('lib.unpack.shutil', mock_shutil)
-    mocker.patch('lib.unpack.mount_tools', mock_mount_tools)
-    mocker.patch('lib.unpack.os', mock_os)
-    mocker.patch('lib.unpack.file_data', mock_file_data)
-    mocker.patch('lib.unpack.contexts', mock_contexts)
+    mocker.patch('clamav_large_archive_scanner.lib.unpack.shutil', mock_shutil)
+    mocker.patch('clamav_large_archive_scanner.lib.unpack.mount_tools', mock_mount_tools)
+    mocker.patch('clamav_large_archive_scanner.lib.unpack.os', mock_os)
+    mocker.patch('clamav_large_archive_scanner.lib.unpack.file_data', mock_file_data)
+    mocker.patch('clamav_large_archive_scanner.lib.unpack.contexts', mock_contexts)
 
     yield
 
@@ -110,7 +121,7 @@ def _assert_base_file_handler_init_behavior(mock_u_ctx: MagicMock):
 
 
 def test_base_file_unpacker():
-    from lib.unpack import BaseFileUnpackHandler
+    from clamav_large_archive_scanner.lib.unpack import BaseFileUnpackHandler
 
     mock_u_ctx = _make_mock_u_ctx()
 
@@ -123,7 +134,7 @@ def test_base_file_unpacker():
 
 
 def test_archive_file_unpacker(mock_shutil):
-    from lib.unpack import ArchiveFileUnpackHandler
+    from clamav_large_archive_scanner.lib.unpack import ArchiveFileUnpackHandler
 
     mock_u_ctx = _make_mock_u_ctx()
 
@@ -138,7 +149,7 @@ def test_archive_file_unpacker(mock_shutil):
 
 
 def test_archive_file_unpacker_unpack_failed(mock_shutil):
-    from lib.unpack import ArchiveFileUnpackHandler
+    from clamav_large_archive_scanner.lib.unpack import ArchiveFileUnpackHandler
 
     mock_u_ctx = _make_mock_u_ctx()
 
@@ -155,7 +166,7 @@ def test_archive_file_unpacker_unpack_failed(mock_shutil):
 
 
 def test_iso_unpacker(mock_mount_tools):
-    from lib.unpack import IsoFileUnpackHandler
+    from clamav_large_archive_scanner.lib.unpack import IsoFileUnpackHandler
 
     mock_u_ctx = _make_mock_u_ctx()
 
@@ -169,7 +180,7 @@ def test_iso_unpacker(mock_mount_tools):
 
 
 def test_iso_unpacker_mount_error(mock_mount_tools):
-    from lib.unpack import IsoFileUnpackHandler
+    from clamav_large_archive_scanner.lib.unpack import IsoFileUnpackHandler
 
     mock_u_ctx = _make_mock_u_ctx()
 
@@ -195,19 +206,19 @@ def _archive_unpacker_children_test_and_assert(handler_class, expected_file_form
 
 
 def test_tar_unpacker():
-    from lib.unpack import TarFileUnpackHandler
+    from clamav_large_archive_scanner.lib.unpack import TarFileUnpackHandler
 
     _archive_unpacker_children_test_and_assert(TarFileUnpackHandler, EXPECTED_TAR_FILE_FORMAT)
 
 
 def test_zip_unpacker():
-    from lib.unpack import ZipFileUnpackHandler
+    from clamav_large_archive_scanner.lib.unpack import ZipFileUnpackHandler
 
     _archive_unpacker_children_test_and_assert(ZipFileUnpackHandler, EXPECTED_ZIP_FILE_FORMAT)
 
 
 def test_targz_unpacker():
-    from lib.unpack import TarGzFileUnpackHandler
+    from clamav_large_archive_scanner.lib.unpack import TarGzFileUnpackHandler
 
     _archive_unpacker_children_test_and_assert(TarGzFileUnpackHandler, EXPECTED_TGZ_FILE_FORMAT)
 
@@ -224,7 +235,7 @@ def _assert_guestfs_unpack_calls(mock_mount_tools, expected_tmp_dir, expected_pa
 
 
 def test_guestfs_unpacker(mock_mount_tools):
-    from lib.unpack import GuestFSFileUnpackHandler
+    from clamav_large_archive_scanner.lib.unpack import GuestFSFileUnpackHandler
 
     # For test output formatting... don't remove
     print()
@@ -243,7 +254,7 @@ def test_guestfs_unpacker(mock_mount_tools):
 
 
 def test_guestfs_unpacker_enumerate_error(mock_mount_tools):
-    from lib.unpack import GuestFSFileUnpackHandler
+    from clamav_large_archive_scanner.lib.unpack import GuestFSFileUnpackHandler
 
     # For test output formatting... don't remove
     print()
@@ -264,7 +275,7 @@ def test_guestfs_unpacker_enumerate_error(mock_mount_tools):
 
 
 def test_guestfs_unpacker_mount_error(mock_mount_tools):
-    from lib.unpack import GuestFSFileUnpackHandler
+    from clamav_large_archive_scanner.lib.unpack import GuestFSFileUnpackHandler
 
     # For test output formatting... don't remove
     print()
@@ -283,7 +294,7 @@ def test_guestfs_unpacker_mount_error(mock_mount_tools):
 
 
 def test_dir_unpacker():
-    from lib.unpack import DirFileUnpackHandler
+    from clamav_large_archive_scanner.lib.unpack import DirFileUnpackHandler
 
     mock_u_ctx = _make_mock_u_ctx()
 
@@ -297,7 +308,8 @@ def test_dir_unpacker():
 
 
 def test_is_handled_filetype():
-    from lib.unpack import is_handled_filetype
+    from clamav_large_archive_scanner.lib.unpack import is_handled_filetype
+
     meta = common.make_file_meta('some_path')
     for filetype in EXPECTED_HANDLED_FILE_TYPES:
         meta.filetype = filetype
@@ -308,7 +320,7 @@ def test_is_handled_filetype():
 
 
 def test_unpack(mock_shutil, mock_contexts):
-    from lib.unpack import unpack
+    from clamav_large_archive_scanner.lib.unpack import unpack
 
     expected_file_meta = _make_file_meta()
     mock_u_ctx = _make_mock_u_ctx()
@@ -323,7 +335,7 @@ def test_unpack(mock_shutil, mock_contexts):
 
 
 def test_unpack_unhandled_filetype(mock_contexts):
-    from lib.unpack import unpack
+    from clamav_large_archive_scanner.lib.unpack import unpack
 
     expected_file_meta = _make_file_meta()
     expected_file_meta.filetype = FileType.DOES_NOT_EXIST
@@ -338,7 +350,7 @@ def test_unpack_unhandled_filetype(mock_contexts):
 
 
 def test_unpack_archive_exception(mock_shutil, mock_contexts):
-    from lib.unpack import unpack
+    from clamav_large_archive_scanner.lib.unpack import unpack
 
     expected_archive_exception_str = 'some_archive_exception'
 
@@ -442,7 +454,8 @@ def _recursive_unpack_unpack_context_ctor_side_effect(*args, **kwargs):
 
 
 def test_unpack_recursive(mock_shutil, mock_contexts, mock_os, mock_file_data):
-    from lib.unpack import unpack_recursive
+    from clamav_large_archive_scanner.lib.unpack import unpack_recursive
+
     # For test output formatting... don't remove
     print()
 

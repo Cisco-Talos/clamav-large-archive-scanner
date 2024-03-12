@@ -1,20 +1,30 @@
-#  Copyright (C) 2023 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
+# Copyright (C) 2023-2024 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
 #
-#  Authors: Dave Zhu (yanbzhu@cisco.com)
+# Authors: Dave Zhu (yanbzhu@cisco.com)
 #
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License version 2 as
-#  published by the Free Software Foundation.
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 #
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of mosquitto nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
 #
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
-#  MA 02110-1301, USA.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 
 from unittest.mock import MagicMock
 
@@ -24,7 +34,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 import common
-from lib.file_data import FileMetadata, FileType
+from clamav_large_archive_scanner.lib.file_data import FileMetadata, FileType
 
 EXPECTED_PATH = '/some/path/some_archive.tar'
 EXPECTED_MIN_SIZE = '100M'
@@ -72,10 +82,10 @@ def testcase_file_meta() -> FileMetadata:
 def setup_and_teardown(mocker: MockerFixture, mock_cleaner, mock_detect, mock_unpacker, mock_scanner):
     # Before logic
     # These are re-mocked for every single test
-    mocker.patch('main.cleaner', mock_cleaner)
-    mocker.patch('main.detect', mock_detect)
-    mocker.patch('main.unpacker', mock_unpacker)
-    mocker.patch('main.scanner', mock_scanner)
+    mocker.patch('clamav_large_archive_scanner.main.cleaner', mock_cleaner)
+    mocker.patch('clamav_large_archive_scanner.main.detect', mock_detect)
+    mocker.patch('clamav_large_archive_scanner.main.unpacker', mock_unpacker)
+    mocker.patch('clamav_large_archive_scanner.main.scanner', mock_scanner)
 
     yield
     # After logic
@@ -128,23 +138,23 @@ def _assert_no_cleanup(mock_cleaner: MagicMock):
     mock_cleaner.assert_not_called()
 
 
-def test_deepscan_no_clamdscan(mock_scanner):
-    from main import _deepscan
+def test_scan_no_clamdscan(mock_scanner):
+    from clamav_large_archive_scanner.main import _scan
     _set_clamdscan_present(mock_scanner, False)
 
     with pytest.raises(click.ClickException) as e:
-        _deepscan(EXPECTED_PATH, EXPECTED_MIN_SIZE, False, False, False, EXPECTED_TMP_DIR)
+        _scan(EXPECTED_PATH, EXPECTED_MIN_SIZE, False, False, False, EXPECTED_TMP_DIR)
 
     mock_scanner.validate_clamdscan.assert_called_once_with()
 
 
-def test_deepscan_happy_path(mock_scanner, mock_cleaner, mock_unpacker, mock_detect, testcase_file_meta):
-    from main import _deepscan
+def test_scan_happy_path(mock_scanner, mock_cleaner, mock_unpacker, mock_detect, testcase_file_meta):
+    from clamav_large_archive_scanner.main import _scan
     _set_clamdscan_present(mock_scanner, True)
     _set_default_unpack_mocks(mock_unpacker, mock_detect, testcase_file_meta)
     _set_clamdscan_clean(mock_scanner, True)
 
-    _deepscan(EXPECTED_PATH, EXPECTED_MIN_SIZE, False, False, False, EXPECTED_TMP_DIR)
+    _scan(EXPECTED_PATH, EXPECTED_MIN_SIZE, False, False, False, EXPECTED_TMP_DIR)
 
     _assert_unpack_logic(mock_detect, mock_unpacker, EXPECTED_PATH, True, EXPECTED_MIN_SIZE_BYTES, EXPECTED_TMP_DIR,
                          testcase_file_meta)
@@ -153,13 +163,13 @@ def test_deepscan_happy_path(mock_scanner, mock_cleaner, mock_unpacker, mock_det
     mock_cleaner.cleanup_recursive.assert_called_once_with(EXPECTED_PATH, EXPECTED_TMP_DIR)
 
 
-def test_deepscan_happy_path_all_match(mock_scanner, mock_cleaner, mock_unpacker, mock_detect, testcase_file_meta):
-    from main import _deepscan
+def test_scan_happy_path_all_match(mock_scanner, mock_cleaner, mock_unpacker, mock_detect, testcase_file_meta):
+    from clamav_large_archive_scanner.main import _scan
     _set_clamdscan_present(mock_scanner, True)
     _set_default_unpack_mocks(mock_unpacker, mock_detect, testcase_file_meta)
     _set_clamdscan_clean(mock_scanner, True)
 
-    _deepscan(EXPECTED_PATH, EXPECTED_MIN_SIZE, False, False, True, EXPECTED_TMP_DIR)
+    _scan(EXPECTED_PATH, EXPECTED_MIN_SIZE, False, False, True, EXPECTED_TMP_DIR)
 
     _assert_unpack_logic(mock_detect, mock_unpacker, EXPECTED_PATH, True, EXPECTED_MIN_SIZE_BYTES, EXPECTED_TMP_DIR,
                          testcase_file_meta)
@@ -168,14 +178,14 @@ def test_deepscan_happy_path_all_match(mock_scanner, mock_cleaner, mock_unpacker
     mock_cleaner.cleanup_recursive.assert_called_once_with(EXPECTED_PATH, EXPECTED_TMP_DIR)
 
 
-def test_deepscan_virus_fail_fast(mock_scanner, mock_cleaner, mock_unpacker, mock_detect, testcase_file_meta):
-    from main import _deepscan
+def test_scan_virus_fail_fast(mock_scanner, mock_cleaner, mock_unpacker, mock_detect, testcase_file_meta):
+    from clamav_large_archive_scanner.main import _scan
     _set_clamdscan_present(mock_scanner, True)
     _set_default_unpack_mocks(mock_unpacker, mock_detect, testcase_file_meta)
     _set_clamdscan_clean(mock_scanner, False)
 
     with pytest.raises(click.ClickException) as e:
-        _deepscan(EXPECTED_PATH, EXPECTED_MIN_SIZE, False, True, False, EXPECTED_TMP_DIR)
+        _scan(EXPECTED_PATH, EXPECTED_MIN_SIZE, False, True, False, EXPECTED_TMP_DIR)
 
     _assert_unpack_logic(mock_detect, mock_unpacker, EXPECTED_PATH, True, EXPECTED_MIN_SIZE_BYTES, EXPECTED_TMP_DIR,
                          testcase_file_meta)
@@ -184,12 +194,12 @@ def test_deepscan_virus_fail_fast(mock_scanner, mock_cleaner, mock_unpacker, moc
     mock_cleaner.cleanup_recursive.assert_called_once_with(EXPECTED_PATH, EXPECTED_TMP_DIR)
 
 
-def test_deepscan_error_all_match_and_ff(mock_scanner, mock_cleaner, mock_unpacker, mock_detect, testcase_file_meta):
-    from main import _deepscan
+def test_scan_error_all_match_and_ff(mock_scanner, mock_cleaner, mock_unpacker, mock_detect, testcase_file_meta):
+    from clamav_large_archive_scanner.main import _scan
     _set_clamdscan_present(mock_scanner, True)
 
     with pytest.raises(click.ClickException) as e:
-        _deepscan(EXPECTED_PATH, EXPECTED_MIN_SIZE, False, True, True, EXPECTED_TMP_DIR)
+        _scan(EXPECTED_PATH, EXPECTED_MIN_SIZE, False, True, True, EXPECTED_TMP_DIR)
 
     assert e.value.message == 'Cannot specify both --allmatch and --fail-fast'
 
@@ -199,7 +209,7 @@ def test_deepscan_error_all_match_and_ff(mock_scanner, mock_cleaner, mock_unpack
 
 
 def test_unpack_non_recursive(mock_unpacker, mock_detect, testcase_file_meta):
-    from main import _unpack
+    from clamav_large_archive_scanner.main import _unpack
     _set_default_unpack_mocks(mock_unpacker, mock_detect, testcase_file_meta)
 
     _unpack(EXPECTED_PATH, False, EXPECTED_MIN_SIZE, False, EXPECTED_TMP_DIR)

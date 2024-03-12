@@ -1,20 +1,30 @@
-#  Copyright (C) 2023 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
+# Copyright (C) 2023-2024 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
 #
-#  Authors: Dave Zhu (yanbzhu@cisco.com)
+# Authors: Dave Zhu (yanbzhu@cisco.com)
 #
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License version 2 as
-#  published by the Free Software Foundation.
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 #
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of mosquitto nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
 #
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
-#  MA 02110-1301, USA.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 
 from unittest.mock import MagicMock
 
@@ -23,7 +33,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 import common
-from lib.exceptions import MountException
+from clamav_large_archive_scanner.lib.exceptions import MountException
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -45,8 +55,8 @@ def mock_subprocess():
 def setup_and_teardown(mocker: MockerFixture, mock_os, mock_subprocess):
     # Before logic
     # These are re-mocked for every single test
-    mocker.patch('lib.mount_tools.os', mock_os)
-    mocker.patch('lib.mount_tools.subprocess', mock_subprocess)
+    mocker.patch('clamav_large_archive_scanner.lib.mount_tools.os', mock_os)
+    mocker.patch('clamav_large_archive_scanner.lib.mount_tools.subprocess', mock_subprocess)
 
     yield
     # After logic
@@ -74,7 +84,7 @@ def _make_subprocess_result(stdout: str, stderr: str, returncode: int):
 
 
 def _call_enumerate_guestfs_parts():
-    from lib.mount_tools import enumerate_guestfs_partitions
+    from clamav_large_archive_scanner.lib.mount_tools import enumerate_guestfs_partitions
     return enumerate_guestfs_partitions(EXPECTED_ARCHIVE_PATH)
 
 
@@ -111,7 +121,7 @@ def _assert_mount_guestfs_common_calls(mock_os):
 
 
 def _call_mount_guestfs_partition():
-    from lib.mount_tools import mount_guestfs_partition
+    from clamav_large_archive_scanner.lib.mount_tools import mount_guestfs_partition
     return mount_guestfs_partition(EXPECTED_ARCHIVE_PATH, GUESTFS_PARTITIONS[0], EXPECTED_PARENT_TMP_DIR)
 
 
@@ -150,7 +160,7 @@ def test_mount_guestfs_partition_error(mock_subprocess, mock_os):
 
 
 def _mount_iso():
-    from lib.mount_tools import mount_iso
+    from clamav_large_archive_scanner.lib.mount_tools import mount_iso
     mount_iso(EXPECTED_ARCHIVE_PATH, EXPECTED_PARENT_TMP_DIR)
 
 
@@ -210,7 +220,7 @@ def _assert_guestumount_not_called(mock_subprocess):
 
 
 def _call_umount_guestfs_partition(directory):
-    from lib.mount_tools import umount_guestfs_partition
+    from clamav_large_archive_scanner.lib.mount_tools import umount_guestfs_partition
     umount_guestfs_partition(directory)
 
 
@@ -254,7 +264,7 @@ def test_umount_guestfs_partition_umount_error(mock_subprocess):
 
 
 def test_umount_iso(mock_subprocess):
-    from lib.mount_tools import umount_iso
+    from clamav_large_archive_scanner.lib.mount_tools import umount_iso
     mock_subprocess.run.return_value = _make_subprocess_result('', '', 0)
 
     umount_iso(EXPECTED_ARCHIVE_PATH)
@@ -263,7 +273,7 @@ def test_umount_iso(mock_subprocess):
 
 
 def test_umount_iso_failed(mock_subprocess):
-    from lib.mount_tools import umount_iso
+    from clamav_large_archive_scanner.lib.mount_tools import umount_iso
     mock_subprocess.run.return_value = _make_subprocess_result(EXPECTED_STDOUT, EXPECTED_STDERR, 1)
 
     with pytest.raises(MountException) as e:

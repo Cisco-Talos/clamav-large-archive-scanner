@@ -1,32 +1,42 @@
-#  Copyright (C) 2023 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
+# Copyright (C) 2023-2024 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
 #
-#  Authors: Dave Zhu (yanbzhu@cisco.com)
+# Authors: Dave Zhu (yanbzhu@cisco.com)
 #
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License version 2 as
-#  published by the Free Software Foundation.
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 #
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of mosquitto nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
 #
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
-#  MA 02110-1301, USA.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 
 import click
 import humanize
 
-import lib.cleanup as cleaner
-import lib.file_data as detect
-import lib.unpack as unpacker
-import lib.scanner as scanner
-import lib.contexts as Contexts
+import clamav_large_archive_scanner.lib.cleanup as cleaner
+import clamav_large_archive_scanner.lib.file_data as detect
+import clamav_large_archive_scanner.lib.unpack as unpacker
+import clamav_large_archive_scanner.lib.scanner as scanner
+import clamav_large_archive_scanner.lib.contexts as Contexts
 
-from lib import fast_log
-from lib.filesize import convert_human_to_machine_bytes
+from clamav_large_archive_scanner.lib import fast_log
+from clamav_large_archive_scanner.lib.filesize import convert_human_to_machine_bytes
 
 DEFAULT_MIN_SIZE_THRESHOLD_BYTES = 2 * 1024 * 1024 * 1024  # 2GB
 DEFAULT_MIN_SIZE_HUMAN = humanize.naturalsize(DEFAULT_MIN_SIZE_THRESHOLD_BYTES, binary=True)
@@ -39,11 +49,11 @@ DEFAULT_MIN_SIZE_HUMAN = humanize.naturalsize(DEFAULT_MIN_SIZE_THRESHOLD_BYTES, 
 
 @click.group()
 @click.option('-t', '--trace', is_flag=True, default=False,
-              help=f'Enable trace logging. By default, log all actions to {fast_log.LOG_FILE}')
+              help=f'Enable trace logging. By default, log all actions to {fast_log.LOG_FILE}.')
 @click.option('--trace-file', default=None, type=click.Path(resolve_path=True),
-              help=f'Override the default trace log file')
-@click.option('-v', '--verbose', is_flag=True, default=False, help='Enable verbose logging')
-@click.option('-q', '--quiet', is_flag=True, default=False, help='Disable all logging')
+              help=f'Override the default trace log file.')
+@click.option('-v', '--verbose', is_flag=True, default=False, help='Enable verbose logging.')
+@click.option('-q', '--quiet', is_flag=True, default=False, help='Disable all logging.')
 def cli(trace, trace_file, verbose, quiet):
     if not quiet:
         fast_log.log_start(verbose, trace, trace_file)
@@ -100,13 +110,13 @@ def _unpack(path: str, recursive: bool, min_size: str, ignore_size: bool, tmp_di
 @cli.command()
 @click.argument('path', type=click.Path(exists=True, resolve_path=True))
 # @click.argument('path', type=click.Path(exists=False, resolve_path=True))
-@click.option('-r', '--recursive', is_flag=True, help='Recursively unpack files')
+@click.option('-r', '--recursive', is_flag=True, help='Recursively unpack files.')
 @click.option('--min-size', default=DEFAULT_MIN_SIZE_THRESHOLD_BYTES,
-              help=f'Minimum file size to unpack (default: {DEFAULT_MIN_SIZE_HUMAN})', type=str)
+              help=f'Minimum file size to unpack (default: {DEFAULT_MIN_SIZE_HUMAN}).', type=str)
 @click.option('--ignore-size', default=False, is_flag=True,
-              help='Ignore file size lower limit (equivalent to --min-size=0)')
+              help='Ignore file size lower limit (equivalent to --min-size=0).')
 @click.option('--tmp-dir', default='/tmp', type=click.Path(resolve_path=True),
-              help='Directory to unpack files to (default: /tmp)')
+              help='Directory to unpack files to (default: /tmp).')
 def unpack(path, recursive, min_size, ignore_size, tmp_dir):
     _unpack(path, recursive, min_size, ignore_size, tmp_dir)
 
@@ -124,14 +134,14 @@ def _cleanup(path, is_file, tmp_dir):
 
 @cli.command()
 @click.argument('path', type=click.Path(exists=True, resolve_path=True))
-@click.option('--file', 'is_file', is_flag=True, help='Recursively cleanup directories associated with the file ')
+@click.option('--file', 'is_file', is_flag=True, help='Recursively cleanup directories associated with the file.')
 @click.option('--tmp-dir', default='/tmp', type=click.Path(resolve_path=True),
-              help='Directory to search for unpacked files(default: /tmp)')
+              help='Directory to search for unpacked files (default: /tmp).')
 def cleanup(path, is_file, tmp_dir):
     _cleanup(path, is_file, tmp_dir)
 
 
-def _deepscan(path, min_size, ignore_size, fail_fast, all_match, tmp_dir):
+def _scan(path, min_size, ignore_size, fail_fast, all_match, tmp_dir):
     if not scanner.validate_clamdscan():
         raise click.ClickException(f'Unable to find clamdscan, please install it and try again')
 
@@ -155,17 +165,17 @@ def _deepscan(path, min_size, ignore_size, fail_fast, all_match, tmp_dir):
 @cli.command()
 @click.argument('path', type=click.Path(exists=True, resolve_path=True))
 @click.option('--min-size', default=DEFAULT_MIN_SIZE_THRESHOLD_BYTES,
-              help=f'Minimum file size to unpack (default: {DEFAULT_MIN_SIZE_HUMAN})', type=str)
+              help=f'Minimum file size to unpack (default: {DEFAULT_MIN_SIZE_HUMAN}).', type=str)
 @click.option('--ignore-size', default=False, is_flag=True,
-              help='Ignore file size lower limit (equivalent to --min-size=0)')
+              help='Ignore file size lower limit (equivalent to --min-size=0).')
 @click.option('--tmp-dir', default='/tmp', type=click.Path(resolve_path=True),
-              help='Temporary working directory (default: /tmp)')
+              help='Temporary working directory (default: /tmp).')
 @click.option('-ff', '--fail-fast', default=False, is_flag=True,
-              help='Stop scanning after the first failure')
+              help='Stop scanning after the first failure.')
 @click.option('--allmatch', default=False, is_flag=True,
-              help='Stop scanning after the first failure')
-def deepscan(path, min_size, ignore_size, fail_fast, allmatch, tmp_dir):
-    _deepscan(path, min_size, ignore_size, fail_fast, allmatch, tmp_dir)
+              help='Continue scanning if a signature match occurs.')
+def scan(path, min_size, ignore_size, fail_fast, allmatch, tmp_dir):
+    _scan(path, min_size, ignore_size, fail_fast, allmatch, tmp_dir)
 
 
 if __name__ == "__main__":

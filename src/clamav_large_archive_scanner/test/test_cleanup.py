@@ -1,20 +1,30 @@
-#  Copyright (C) 2023 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
+# Copyright (C) 2023-2024 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
 #
-#  Authors: Dave Zhu (yanbzhu@cisco.com)
+# Authors: Dave Zhu (yanbzhu@cisco.com)
 #
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License version 2 as
-#  published by the Free Software Foundation.
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 #
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of mosquitto nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
 #
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
-#  MA 02110-1301, USA.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 
 from unittest.mock import MagicMock, call
 
@@ -24,10 +34,10 @@ import pytest
 from pytest_mock import MockerFixture
 
 import common
-import lib.cleanup
-import lib.exceptions
-import lib.mount_tools
-from lib.file_data import FileType
+import clamav_large_archive_scanner.lib.cleanup
+import clamav_large_archive_scanner.lib.exceptions
+import clamav_large_archive_scanner.lib.mount_tools
+from clamav_large_archive_scanner.lib.file_data import FileType
 
 # Some constants
 
@@ -60,9 +70,9 @@ def mock_tmp_files():
 def setup_and_teardown(mocker: MockerFixture, mock_shutil, mock_mount_tools, mock_tmp_files):
     # Before logic
     # These are re-mocked for every single test
-    mocker.patch('lib.cleanup.shutil', mock_shutil)
-    mocker.patch('lib.cleanup.mount_tools', mock_mount_tools)
-    mocker.patch('lib.cleanup.tmp_files', mock_tmp_files)
+    mocker.patch('clamav_large_archive_scanner.lib.cleanup.shutil', mock_shutil)
+    mocker.patch('clamav_large_archive_scanner.lib.cleanup.mount_tools', mock_mount_tools)
+    mocker.patch('clamav_large_archive_scanner.lib.cleanup.tmp_files', mock_tmp_files)
 
     yield
 
@@ -81,7 +91,7 @@ def test_base_cleanup_handler(mock_shutil):
     # For test output formatting... don't remove
     print()
 
-    handler = lib.cleanup.BaseCleanupHandler(EXPECTED_ARCHIVE_PATH)
+    handler = clamav_large_archive_scanner.lib.cleanup.BaseCleanupHandler(EXPECTED_ARCHIVE_PATH)
     _assert_base_cleanup_behavior(mock_shutil, handler)
 
 
@@ -89,7 +99,7 @@ def test_tar_cleanup_handler(mock_shutil):
     # Tar has the same logic as base
     print()
 
-    handler = lib.cleanup.TarCleanupHandler(EXPECTED_ARCHIVE_PATH)
+    handler = clamav_large_archive_scanner.lib.cleanup.TarCleanupHandler(EXPECTED_ARCHIVE_PATH)
     _assert_base_cleanup_behavior(mock_shutil, handler)
 
 
@@ -97,7 +107,7 @@ def test_targz_cleanup_handler(mock_shutil):
     # Tar has the same logic as base
     print()
 
-    handler = lib.cleanup.TarGzCleanupHandler(EXPECTED_ARCHIVE_PATH)
+    handler = clamav_large_archive_scanner.lib.cleanup.TarGzCleanupHandler(EXPECTED_ARCHIVE_PATH)
     _assert_base_cleanup_behavior(mock_shutil, handler)
 
 
@@ -105,7 +115,7 @@ def test_zip_cleanup_handler(mock_shutil):
     # Zip has the same logic as base
     print()
 
-    handler = lib.cleanup.ZipCleanupHandler(EXPECTED_ARCHIVE_PATH)
+    handler = clamav_large_archive_scanner.lib.cleanup.ZipCleanupHandler(EXPECTED_ARCHIVE_PATH)
     _assert_base_cleanup_behavior(mock_shutil, handler)
 
 
@@ -113,7 +123,7 @@ def test_iso_cleanup_handler(mock_shutil, mock_mount_tools):
     # For test output formatting... don't remove
     print()
 
-    handler = lib.cleanup.IsoCleanupHandler(EXPECTED_ARCHIVE_PATH)
+    handler = clamav_large_archive_scanner.lib.cleanup.IsoCleanupHandler(EXPECTED_ARCHIVE_PATH)
     handler.cleanup()
 
     mock_mount_tools.umount_iso.assert_called_once_with(EXPECTED_ARCHIVE_PATH)
@@ -124,9 +134,9 @@ def test_iso_cleanup_handler_mount_error(mock_shutil, mock_mount_tools):
     # For test output formatting... don't remove
     print()
 
-    mock_mount_tools.umount_iso.side_effect = lib.exceptions.MountException('some test error')
+    mock_mount_tools.umount_iso.side_effect = clamav_large_archive_scanner.lib.exceptions.MountException('some test error')
 
-    handler = lib.cleanup.IsoCleanupHandler(EXPECTED_ARCHIVE_PATH)
+    handler = clamav_large_archive_scanner.lib.cleanup.IsoCleanupHandler(EXPECTED_ARCHIVE_PATH)
 
     with pytest.raises(click.FileError) as e:
         handler.cleanup()
@@ -150,7 +160,7 @@ def test_guestfs_cleanup_handler(mock_shutil, mock_mount_tools):
 
     mock_mount_tools.list_top_level_dirs.return_value = GUESTFS_PARTITIONS
 
-    handler = lib.cleanup.GuestFSCleanupHandler(EXPECTED_ARCHIVE_PATH)
+    handler = clamav_large_archive_scanner.lib.cleanup.GuestFSCleanupHandler(EXPECTED_ARCHIVE_PATH)
     handler.cleanup()
 
     _assert_umount_has_calls(mock_mount_tools.umount_guestfs_partition)
@@ -161,7 +171,7 @@ def test_guestfs_cleanup_handler(mock_shutil, mock_mount_tools):
 # Raises an exception on the second partition
 def _umount_exception_thrower(dir_name: str):
     if dir_name == GUESTFS_PARTITIONS[1]:
-        raise lib.exceptions.MountException('some test error')
+        raise clamav_large_archive_scanner.lib.exceptions.MountException('some test error')
 
 
 def test_guestfs_cleanup_handler_umount_error(mock_shutil, mock_mount_tools):
@@ -171,7 +181,7 @@ def test_guestfs_cleanup_handler_umount_error(mock_shutil, mock_mount_tools):
     mock_mount_tools.list_top_level_dirs.return_value = GUESTFS_PARTITIONS
     mock_mount_tools.umount_guestfs_partition.side_effect = _umount_exception_thrower
 
-    handler = lib.cleanup.GuestFSCleanupHandler(EXPECTED_ARCHIVE_PATH)
+    handler = clamav_large_archive_scanner.lib.cleanup.GuestFSCleanupHandler(EXPECTED_ARCHIVE_PATH)
     handler.cleanup()
 
     _assert_umount_has_calls(mock_mount_tools.umount_guestfs_partition)
@@ -189,7 +199,7 @@ def test_cleanup_path(mock_tmp_files, mock_shutil):
 
     mock_tmp_files.determine_tmp_dir_filetype.return_value = FileType.TAR
 
-    lib.cleanup.cleanup_path(EXPECTED_ARCHIVE_PATH)
+    clamav_large_archive_scanner.lib.cleanup.cleanup_path(EXPECTED_ARCHIVE_PATH)
 
     _assert_base_cleanup_behavior(mock_shutil)
 
@@ -201,7 +211,7 @@ def test_cleanup_path_unknown_type(mock_tmp_files, mock_shutil):
     mock_tmp_files.determine_tmp_dir_filetype.return_value = FileType.UNKNOWN
 
     with pytest.raises(click.BadParameter) as e:
-        lib.cleanup.cleanup_path(EXPECTED_ARCHIVE_PATH)
+        clamav_large_archive_scanner.lib.cleanup.cleanup_path(EXPECTED_ARCHIVE_PATH)
 
     assert str(e.value) == f'Unhandled file type: {FileType.UNKNOWN}'
 
@@ -215,7 +225,7 @@ def test_cleanup_single_file(mock_tmp_files, mock_shutil):
     mock_tmp_files.determine_tmp_dir_filetype.return_value = FileType.TAR
     mock_tmp_files.find_associated_dirs.return_value = ASSOCIATED_DIRS
 
-    lib.cleanup.cleanup_file(EXPECTED_ARCHIVE_PATH, EXPECTED_ARCHIVE_PARENT_DIR)
+    clamav_large_archive_scanner.lib.cleanup.cleanup_file(EXPECTED_ARCHIVE_PATH, EXPECTED_ARCHIVE_PARENT_DIR)
 
     mock_tmp_files.find_associated_dirs.assert_called_once_with(EXPECTED_ARCHIVE_PATH, EXPECTED_ARCHIVE_PARENT_DIR)
     _assert_base_cleanup_behavior(mock_shutil, expected_path=ASSOCIATED_DIRS[0])
@@ -228,7 +238,7 @@ def test_cleanup_recursive(mock_tmp_files, mock_shutil):
     mock_tmp_files.determine_tmp_dir_filetype.return_value = FileType.TAR
     mock_tmp_files.find_associated_dirs.return_value = ASSOCIATED_DIRS
 
-    lib.cleanup.cleanup_recursive(EXPECTED_ARCHIVE_PATH, EXPECTED_ARCHIVE_PARENT_DIR)
+    clamav_large_archive_scanner.lib.cleanup.cleanup_recursive(EXPECTED_ARCHIVE_PATH, EXPECTED_ARCHIVE_PARENT_DIR)
 
     mock_tmp_files.find_associated_dirs.assert_called_once_with(EXPECTED_ARCHIVE_PATH, EXPECTED_ARCHIVE_PARENT_DIR)
     mock_shutil.rmtree.assert_has_calls([call(path=x, ignore_errors=True) for x in ASSOCIATED_DIRS], any_order=True)
@@ -240,7 +250,7 @@ def test_cleanup_no_files(mock_tmp_files, mock_shutil):
 
     mock_tmp_files.find_associated_dirs.return_value = []
 
-    lib.cleanup.cleanup_recursive(EXPECTED_ARCHIVE_PATH, EXPECTED_ARCHIVE_PARENT_DIR)
+    clamav_large_archive_scanner.lib.cleanup.cleanup_recursive(EXPECTED_ARCHIVE_PATH, EXPECTED_ARCHIVE_PARENT_DIR)
 
     mock_shutil.assert_not_called()
 
@@ -252,12 +262,12 @@ def test_filetype_handlers():
     #
     # This testcase is basically a speedbump
     expected_filetype_handlers = {
-        FileType.TAR: lib.cleanup.TarCleanupHandler,
-        FileType.ZIP: lib.cleanup.ZipCleanupHandler,
-        FileType.ISO: lib.cleanup.IsoCleanupHandler,
-        FileType.VMDK: lib.cleanup.GuestFSCleanupHandler,
-        FileType.TARGZ: lib.cleanup.TarGzCleanupHandler,
-        FileType.QCOW2: lib.cleanup.GuestFSCleanupHandler,
+        FileType.TAR: clamav_large_archive_scanner.lib.cleanup.TarCleanupHandler,
+        FileType.ZIP: clamav_large_archive_scanner.lib.cleanup.ZipCleanupHandler,
+        FileType.ISO: clamav_large_archive_scanner.lib.cleanup.IsoCleanupHandler,
+        FileType.VMDK: clamav_large_archive_scanner.lib.cleanup.GuestFSCleanupHandler,
+        FileType.TARGZ: clamav_large_archive_scanner.lib.cleanup.TarGzCleanupHandler,
+        FileType.QCOW2: clamav_large_archive_scanner.lib.cleanup.GuestFSCleanupHandler,
     }
 
-    assert lib.cleanup.FILETYPE_HANDLERS == expected_filetype_handlers
+    assert clamav_large_archive_scanner.lib.cleanup.FILETYPE_HANDLERS == expected_filetype_handlers
