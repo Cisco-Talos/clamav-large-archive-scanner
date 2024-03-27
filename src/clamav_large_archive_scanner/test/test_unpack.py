@@ -133,7 +133,7 @@ def test_base_file_unpacker():
         unpacker.unpack()
 
 
-def test_archive_file_unpacker(mock_shutil):
+def test_archive_file_unpacker(mock_shutil, mock_os):
     from clamav_large_archive_scanner.lib.unpack import ArchiveFileUnpackHandler
 
     mock_u_ctx = _make_mock_u_ctx()
@@ -146,6 +146,8 @@ def test_archive_file_unpacker(mock_shutil):
     assert unpack_ctx == mock_u_ctx
     mock_shutil.unpack_archive.assert_called_once_with(EXPECTED_ARCHIVE_PATH, EXPECTED_TMP_DIR,
                                                        format=EXPECTED_TAR_FILE_FORMAT)
+
+    mock_os.system.assert_called_once_with(f'chmod -R a+r {EXPECTED_TMP_DIR}')
 
 
 def test_archive_file_unpacker_unpack_failed(mock_shutil):
