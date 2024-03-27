@@ -61,6 +61,9 @@ class ArchiveFileUnpackHandler(BaseFileUnpackHandler):
         # This can sometimes fail if the archive is corrupt
         try:
             shutil.unpack_archive(self.u_ctx.file_meta.path, self.u_ctx.unpacked_dir_location, format=self.format)
+
+            # Try to chmod -R a+r on the new directory so that it can be scanned
+            os.system(f'chmod -R a+r {self.u_ctx.unpacked_dir_location}')
         except Exception as e:
             # Delete the temp dir since the unpacker created it
             self.u_ctx.cleanup_tmp()
