@@ -100,7 +100,7 @@ archive scan /path/to/archive
 > archive scan /path/to/archive
 > ```
 
-To learn more, run `archive --help`, or keep skip to [Usage](#usage).
+To learn more, run `archive --help`, or skip to [Usage](#usage).
 
 ### Running in a Docker Container
 
