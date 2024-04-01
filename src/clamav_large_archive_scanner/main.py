@@ -25,6 +25,7 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
+import sys
 
 import click
 import humanize
@@ -90,7 +91,7 @@ def _unpack(path: str, recursive: bool, min_size: str, ignore_size: bool, tmp_di
         # If so, do not try to unpack it, unless --ignore-size is passed
         if file_meta.size_raw < min_file_size:
             fast_log.warn(
-                f'File size is below the threshold of {DEFAULT_MIN_SIZE_HUMAN}, not unpacking. See help for options')
+                f'File size is below the threshold of {humanize.naturalsize(min_file_size)}, not unpacking. See help for options')
             return []
 
     unpack_ctxs = []
@@ -141,7 +142,7 @@ def cleanup(path, is_file, tmp_dir):
     _cleanup(path, is_file, tmp_dir)
 
 
-def _scan(path, min_size, ignore_size, fail_fast, all_match, tmp_dir):
+def _scan(path, min_size, ignore_size, fail_fast, all_match, tmp_dir) -> int:
     if not scanner.validate_clamdscan():
         raise click.ClickException(f'Unable to find clamdscan, please install it and try again')
 
@@ -157,15 +158,30 @@ def _scan(path, min_size, ignore_size, fail_fast, all_match, tmp_dir):
         # Nothing was unpacked, just run a single clamdscan on the file
         single_ctx = Contexts.UnpackContext(detect.file_meta_from_path(path), tmp_dir)
         single_ctx.unpacked_dir_location = path
-        files_clean = scanner.clamdscan([single_ctx], fail_fast, all_match)
+        scan_results = scanner.clamdscan([single_ctx], fail_fast, all_match)
     else:
-        files_clean = scanner.clamdscan(unpacked_ctxs, fail_fast, all_match)
+        scan_results = scanner.clamdscan(unpacked_ctxs, fail_fast, all_match)
 
     # Cleanup
     cleaner.cleanup_recursive(path, tmp_dir)
 
-    if not files_clean:
-        raise click.ClickException(f'Found virus in {path}')
+    # Log scan results
+    fast_log.info('=' * 80)
+    fast_log.info('Scan Results, showing path and clamdscan return code')
+    for result in scan_results:
+        fast_log.info(str(result))
+    fast_log.info('=' * 80)
+
+    # return value of scan is the "worst" result of the scan, virus > error > clean
+    has_virus = any([result.clamdscan_rv == 1 for result in scan_results])
+    if has_virus:
+        return 1
+
+    has_error = any([result.clamdscan_rv == 2 for result in scan_results])
+    if has_error:
+        return 2
+
+    return 0
 
 
 @cli.command()
@@ -181,7 +197,8 @@ def _scan(path, min_size, ignore_size, fail_fast, all_match, tmp_dir):
 @click.option('--allmatch', default=False, is_flag=True,
               help='Continue scanning if a signature match occurs.')
 def scan(path, min_size, ignore_size, fail_fast, allmatch, tmp_dir):
-    _scan(path, min_size, ignore_size, fail_fast, allmatch, tmp_dir)
+    rv = _scan(path, min_size, ignore_size, fail_fast, allmatch, tmp_dir)
+    sys.exit(rv)
 
 
 if __name__ == "__main__":

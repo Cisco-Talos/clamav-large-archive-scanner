@@ -29,9 +29,35 @@
 # A wrapper around calling clamdscan with a bit of validation thrown in
 
 import subprocess
+from typing import List, Tuple
 
 from clamav_large_archive_scanner.lib import fast_log
 from clamav_large_archive_scanner.lib.contexts import UnpackContext
+
+
+class ScanResult:
+    def __init__(self, path: str, return_code: int):
+        self.path = path
+        self.clamdscan_rv = return_code
+
+    def _get_scancode_str(self) -> str:
+        if self.clamdscan_rv == 0:
+            return 'No virus found.'
+        elif self.clamdscan_rv == 1:
+            return 'Virus(es) found.'
+        elif self.clamdscan_rv == 2:
+            return 'An error occured.'
+        else:
+            return 'Unknown return code.'
+
+    def __str__(self):
+        return f'{self.path}: {self._get_scancode_str()}'
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __eq__(self, other):
+        return self.path == other.path and self.clamdscan_rv == other.clamdscan_rv
 
 
 def validate_clamdscan() -> bool:
@@ -47,11 +73,16 @@ def validate_clamdscan() -> bool:
     return True
 
 
-def _run_clamdscan(path: str, all_match: bool) -> (bool, str):
+def _run_clamdscan(path: str, all_match: bool) -> Tuple[int, str]:
     """
     :param path: A path to scan
     :param all_match: If true, will pass in --allmatch to clam
-    :return: True if no malware is found, False otherwise
+    :return: Returns the RV of clamdscan, which as per man page is this:
+
+            Return Codes
+                0 : No virus found.
+                1 : Virus(es) found.
+                2 : An error occured[sic].
     """
 
     clam_args = ['clamdscan', '-m', '--stdout']
@@ -61,38 +92,35 @@ def _run_clamdscan(path: str, all_match: bool) -> (bool, str):
     clam_args.append(path)
 
     result = subprocess.run(clam_args, capture_output=True, text=True)
-
-    if result.returncode != 0:
-        return False, result.stdout
-
-    return True, ""
+    return result.returncode, result.stdout
 
 
-def clamdscan(u_ctxs: list[UnpackContext], fail_fast: bool, all_match: bool) -> bool:
+def clamdscan(u_ctxs: list[UnpackContext], fail_fast: bool, all_match: bool) -> List[ScanResult]:
     """
     :param u_ctxs: A list of UnpackContexts, containing the paths to scan
     :param fail_fast: If true, will stop scanning after the first failure in the list of paths.
     :param all_match: If true, will pass in --allmatch to clam, which will return all malware found
-    :return: True if no malware is found, False otherwise
+    :return: A list of tuples containing the path and the return code of clamdscan
     """
 
-    paths_clean = True
+    results = []
 
     for a_ctx in u_ctxs:
         fast_log.info(f'Scanning {a_ctx.nice_filename()}')
-        is_clean, clamdscan_output = _run_clamdscan(a_ctx.unpacked_dir_location, all_match)
-        if not is_clean:
-            paths_clean = False
-            fast_log.warn('!' * 80)
-            fast_log.warn(f'Malware found by clamdscan in file {a_ctx.nice_filename()}:')
-            fast_log.warn(a_ctx.detmp_filepath(clamdscan_output))
-            fast_log.warn('!' * 80)
+        clamdscan_rv, clamdscan_output = _run_clamdscan(a_ctx.unpacked_dir_location, all_match)
+        results.append(ScanResult(a_ctx.nice_filename(), clamdscan_rv))
+        if clamdscan_rv != 0:
+            fast_log.info('!' * 80)
+            if clamdscan_rv == 1:
+                # Virus Path
+                fast_log.warn(f'Malware found by clamdscan in file: {a_ctx.nice_filename()}:')
+            elif clamdscan_rv == 2:
+                # Clamdscan error Path
+                fast_log.info(f'Error in clamdscan when scanning file: {a_ctx.nice_filename()}:')
+            fast_log.info(a_ctx.detmp_filepath(clamdscan_output))
+            fast_log.info('!' * 80)
+
             if fail_fast:
-                return False
+                return results
 
-    if paths_clean:
-        fast_log.info('=' * 80)
-        fast_log.info('No malware found by clamdscan, all clear!')
-        fast_log.info('=' * 80)
-
-    return paths_clean
+    return results

@@ -35,6 +35,7 @@ from pytest_mock import MockerFixture
 
 import common
 from clamav_large_archive_scanner.lib.contexts import UnpackContext
+from clamav_large_archive_scanner.lib.scanner import ScanResult
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -106,6 +107,18 @@ EXPECTED_CTXS = [
     common.make_basic_unpack_ctx('some_unpack_path_3', 'some_file_path_3'),
 ]
 
+PATH_SCAN_VALUES = {
+    'some_unpack_path_1': 0,
+    'some_unpack_path_2': 1,
+    'some_unpack_path_3': 2,
+}
+
+EXPECTED_SCAN_RESULTS = [
+    ScanResult('some_file_path_1', 0),
+    ScanResult('some_file_path_2', 1),
+    ScanResult('some_file_path_3', 2),
+]
+
 
 def test_clamdscan_clean(mock_subprocess):
     from clamav_large_archive_scanner.lib.scanner import clamdscan
@@ -131,25 +144,38 @@ def test_clamdscan_virus_found(mock_subprocess):
     from clamav_large_archive_scanner.lib.scanner import clamdscan
     mock_subprocess.run.return_value = _make_subprocess_result('', '', 1)
 
-    assert not clamdscan(EXPECTED_CTXS, False, False)
+    results = clamdscan(EXPECTED_CTXS, False, False)
+    assert len(results) == len(EXPECTED_CTXS)
+    for result in results:
+        assert result.clamdscan_rv == 1
 
     for ctx in EXPECTED_CTXS:
         _assert_run_clamdscan_called(mock_subprocess, ctx, False)
 
 
-def _fail_second_path_side_effect(*args, **kwargs):
-    if args[0][-1] == EXPECTED_CTXS[1].unpacked_dir_location:
-        return _make_subprocess_result('', '', 1)
-    else:
-        return _make_subprocess_result('', '', 0)
+def _clamdscan_side_effect(*args, **kwargs):
+    unpack_path = args[0][-1]
+    return _make_subprocess_result('', '', PATH_SCAN_VALUES[unpack_path])
 
 
 def test_clamdsan_virus_found_fail_fast(mock_subprocess):
     from clamav_large_archive_scanner.lib.scanner import clamdscan
-    mock_subprocess.run.side_effect = _fail_second_path_side_effect
+    mock_subprocess.run.side_effect = _clamdscan_side_effect
 
-    assert not clamdscan(EXPECTED_CTXS, True, False)
+    results = clamdscan(EXPECTED_CTXS, True, False)
+    assert len(results) == 2
+    assert results[0].clamdscan_rv == 0
+    assert results[1].clamdscan_rv == 1
 
     _assert_run_clamdscan_called(mock_subprocess, EXPECTED_CTXS[0], False)
     _assert_run_clamdscan_called(mock_subprocess, EXPECTED_CTXS[1], False)
     assert mock_subprocess.run.call_count == 2
+
+
+def test_clamdsan_virus_and_errors(mock_subprocess):
+    from clamav_large_archive_scanner.lib.scanner import clamdscan
+    mock_subprocess.run.side_effect = _clamdscan_side_effect
+
+    results = clamdscan(EXPECTED_CTXS, False, False)
+
+    assert results == EXPECTED_SCAN_RESULTS
