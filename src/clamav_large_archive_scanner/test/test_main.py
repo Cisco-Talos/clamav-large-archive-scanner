@@ -208,6 +208,27 @@ def test_scan_error_all_match_and_ff(mock_scanner, mock_cleaner, mock_unpacker, 
     _assert_no_cleanup(mock_cleaner)
 
 
+def test_deepscan_no_unpack(mock_scanner, mock_cleaner, mock_unpacker, mock_detect, testcase_file_meta):
+    from clamav_large_archive_scanner.main import _scan
+    _set_clamdscan_present(mock_scanner, True)
+    too_small_meta = testcase_file_meta
+    too_small_meta.size_raw = 0
+    _set_detect_file_meta_from_path(mock_detect, too_small_meta)
+
+    _set_clamdscan_clean(mock_scanner, True)
+
+    _scan(EXPECTED_PATH, EXPECTED_MIN_SIZE, False, False, False, EXPECTED_TMP_DIR)
+
+    _assert_no_unpack(mock_detect, mock_unpacker)
+    mock_scanner.clamdscan.assert_called_once()
+    _assert_no_cleanup(mock_cleaner)
+
+    scanner_call_ctxs = mock_scanner.clamdscan.call_args[0][0]
+    assert len(scanner_call_ctxs) == 1
+    assert scanner_call_ctxs[0].unpacked_dir_location == EXPECTED_PATH
+
+
+
 def test_unpack_non_recursive(mock_unpacker, mock_detect, testcase_file_meta):
     from clamav_large_archive_scanner.main import _unpack
     _set_default_unpack_mocks(mock_unpacker, mock_detect, testcase_file_meta)

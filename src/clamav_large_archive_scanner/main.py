@@ -153,7 +153,13 @@ def _scan(path, min_size, ignore_size, fail_fast, all_match, tmp_dir):
     unpacked_ctxs = _unpack(path, True, min_size, ignore_size, tmp_dir)
 
     # scan the unpacked dirs
-    files_clean = scanner.clamdscan(unpacked_ctxs, fail_fast, all_match)
+    if len(unpacked_ctxs) == 0:
+        # Nothing was unpacked, just run a single clamdscan on the file
+        single_ctx = Contexts.UnpackContext(detect.file_meta_from_path(path), tmp_dir)
+        single_ctx.unpacked_dir_location = path
+        files_clean = scanner.clamdscan([single_ctx], fail_fast, all_match)
+    else:
+        files_clean = scanner.clamdscan(unpacked_ctxs, fail_fast, all_match)
 
     # Cleanup
     cleaner.cleanup_recursive(path, tmp_dir)
