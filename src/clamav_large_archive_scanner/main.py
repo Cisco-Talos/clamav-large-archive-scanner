@@ -169,7 +169,10 @@ def _scan(path, min_size, ignore_size, fail_fast, all_match, tmp_dir) -> int:
     fast_log.info('=' * 80)
     fast_log.info('Scan Results, showing path and clamdscan return code')
     for result in scan_results:
-        fast_log.info(str(result))
+        if result.is_virus_found():
+            fast_log.warn(str(result))
+        else:
+            fast_log.info(str(result))
     fast_log.info('=' * 80)
 
     # return value of scan is the "worst" result of the scan, virus > error > clean

@@ -179,3 +179,9 @@ def test_clamdsan_virus_and_errors(mock_subprocess):
     results = clamdscan(EXPECTED_CTXS, False, False)
 
     assert results == EXPECTED_SCAN_RESULTS
+
+
+def test_scan_result_is_virus():
+    assert ScanResult('some_file', 1).is_virus_found()
+    assert not ScanResult('some_file', 0).is_virus_found()
+    assert not ScanResult('some_file', 2).is_virus_found()

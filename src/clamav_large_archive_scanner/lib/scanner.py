@@ -50,6 +50,9 @@ class ScanResult:
         else:
             return 'Unknown return code.'
 
+    def is_virus_found(self) -> bool:
+        return self.clamdscan_rv == 1
+
     def __str__(self):
         return f'{self.path}: {self._get_scancode_str()}'
 
