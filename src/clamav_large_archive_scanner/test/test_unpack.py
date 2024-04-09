@@ -305,6 +305,7 @@ def test_dir_unpacker():
     unpack_ctx = unpacker.unpack()
 
     assert unpack_ctx == mock_u_ctx
+    assert unpack_ctx.unpacked_dir_location == EXPECTED_ARCHIVE_PATH
 
     mock_u_ctx.create_tmp_dir.assert_not_called()
 

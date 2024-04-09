@@ -140,6 +140,9 @@ class DirFileUnpackHandler:
     def __init__(self, u_ctx: contexts.UnpackContext):
         self.u_ctx = u_ctx
 
+        # Set the "unpacked" location to the original directory
+        self.u_ctx.unpacked_dir_location = self.u_ctx.file_meta.path
+
     def unpack(self) -> contexts.UnpackContext:
         return self.u_ctx
 
